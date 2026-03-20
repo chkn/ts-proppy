@@ -1,7 +1,8 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
+import { defaultPlaceholder } from '../default-placeholder.js'
 
-export function StringEditor({ value, onChange }: ItemEditorProps) {
+export function StringEditor({ value, onChange, propDef }: ItemEditorProps) {
   const strValue = value?.kind === 'primitive' && typeof value.value === 'string' ? value.value : ''
 
   return (
@@ -9,6 +10,7 @@ export function StringEditor({ value, onChange }: ItemEditorProps) {
       type="text"
       value={strValue}
       onChange={(e) => onChange({ kind: 'primitive', value: e.target.value })}
+      placeholder={defaultPlaceholder(propDef)}
       style={{
         width: '100%',
         padding: '4px 6px',

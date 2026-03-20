@@ -1,14 +1,16 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
 import { valueToSourceText } from '../../editing/value-to-source.js'
+import { defaultPlaceholder } from '../default-placeholder.js'
 
-export function JsonFallbackEditor({ value, onChange }: ItemEditorProps) {
+export function JsonFallbackEditor({ value, onChange, propDef }: ItemEditorProps) {
   const text = value ? valueToSourceText(value) : ''
 
   return (
     <textarea
       value={text}
       onChange={(e) => onChange({ kind: 'raw', sourceText: e.target.value })}
+      placeholder={defaultPlaceholder(propDef)}
       style={{
         width: '100%',
         padding: '4px 6px',

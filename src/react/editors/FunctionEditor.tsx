@@ -1,5 +1,6 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
+import { defaultPlaceholder } from '../default-placeholder.js'
 
 export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
   const parameters = propDef.type.kind === 'function' ? propDef.type.parameters : []
@@ -8,6 +9,7 @@ export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
   ).join(', ')
 
   const body = value?.kind === 'lambda' ? value.body : ''
+  const placeholder = defaultPlaceholder(propDef) || 'Enter function body (without braces)'
 
   return (
     <div>
@@ -30,7 +32,7 @@ export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
           parameters: parameters.map(p => p.name),
           body: e.target.value,
         })}
-        placeholder="Enter function body (without braces)"
+        placeholder={placeholder}
         style={{
           width: '100%',
           padding: '6px 8px',

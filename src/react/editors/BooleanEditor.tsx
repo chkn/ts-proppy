@@ -1,8 +1,11 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
 
-export function BooleanEditor({ value, onChange }: ItemEditorProps) {
-  const boolValue = value?.kind === 'primitive' && typeof value.value === 'boolean' ? value.value : false
+export function BooleanEditor({ value, onChange, propDef }: ItemEditorProps) {
+  const defaultBool = propDef.defaultValue?.kind === 'primitive' && typeof propDef.defaultValue.value === 'boolean'
+    ? propDef.defaultValue.value
+    : false
+  const boolValue = value?.kind === 'primitive' && typeof value.value === 'boolean' ? value.value : defaultBool
 
   return (
     <select

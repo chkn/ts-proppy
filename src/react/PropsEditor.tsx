@@ -5,6 +5,7 @@ import type { PropValue } from '../types/prop-value.js'
 import { ItemEditor } from './ItemEditor.js'
 import { RichEditor } from './RichEditor.js'
 import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
+import { valueToSourceText } from '../editing/value-to-source.js'
 
 function isComplexType(propDef: PropDefinition): boolean {
   const { type } = propDef
@@ -102,6 +103,11 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
             {propDef.description && (
               <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px', fontStyle: 'italic' }}>
                 {propDef.description}
+              </div>
+            )}
+            {propDef.defaultValue && !values?.[propDef.name] && (
+              <div style={{ fontSize: '10px', color: '#999', marginBottom: '4px' }}>
+                Default: {valueToSourceText(propDef.defaultValue)}
               </div>
             )}
             {renderPropEditor(propDef)}

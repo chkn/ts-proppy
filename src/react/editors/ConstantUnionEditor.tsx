@@ -11,7 +11,8 @@ function parseConstantUnion(propType: PropType): any[] {
 
 export function ConstantUnionEditor({ value, onChange, propDef }: ItemEditorProps) {
   const options = parseConstantUnion(propDef.type)
-  const currentValue = value?.kind === 'primitive' ? String(value.value) : ''
+  const defaultStr = propDef.defaultValue?.kind === 'primitive' ? String(propDef.defaultValue.value) : ''
+  const currentValue = value?.kind === 'primitive' ? String(value.value) : defaultStr
 
   return (
     <select

@@ -1,5 +1,6 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
+import { defaultPlaceholder } from '../default-placeholder.js'
 
 export function NumberEditor({ value, onChange, propDef }: ItemEditorProps) {
   const numValue = value?.kind === 'primitive' && typeof value.value === 'number' ? value.value : ''
@@ -16,6 +17,7 @@ export function NumberEditor({ value, onChange, propDef }: ItemEditorProps) {
           onChange({ kind: 'primitive', value: val === '' ? 0 : Number(val) })
         }
       }}
+      placeholder={defaultPlaceholder(propDef)}
       style={{
         width: '100%',
         padding: '4px 6px',
