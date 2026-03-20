@@ -1,0 +1,7 @@
+export type { PropType } from './prop-type.js'
+export type { PropDefinition } from './prop-definition.js'
+export type { PropValue, ImportSpecifier } from './prop-value.js'
+export type { ExtractedProps, InsertionPoint } from './extracted-props.js'
+export type { DiscriminatedUnionCase, DiscriminatedUnionInfo } from './discriminated-union.js'
+export type { SourceSpan } from './source-location.js'
+export { getDiscriminatedUnionInfo } from './discriminated-union.js'

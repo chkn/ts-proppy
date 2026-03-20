@@ -1,0 +1,21 @@
+// Types
+export type { PropType } from './types/prop-type.js'
+export type { PropDefinition } from './types/prop-definition.js'
+export type { PropValue, ImportSpecifier } from './types/prop-value.js'
+export type { ExtractedProps, InsertionPoint } from './types/extracted-props.js'
+export type { DiscriminatedUnionCase, DiscriminatedUnionInfo } from './types/discriminated-union.js'
+export type { SourceSpan } from './types/source-location.js'
+export { getDiscriminatedUnionInfo } from './types/discriminated-union.js'
+
+// Extraction
+export { extractPropertiesFromTypeNode } from './extraction/extract-properties.js'
+export { extractPropertiesFromObjectLiteral } from './extraction/extract-values.js'
+export { buildPropType } from './extraction/build-prop-type.js'
+
+// Editing
+export { valueToSourceText, collectImports } from './editing/value-to-source.js'
+export { ensureImport } from './editing/ensure-import.js'
+export { updateProperty, addProperty, removeProperty } from './editing/apply-value.js'
+
+// Materialization
+export { materializeValue } from './materialize/materialize-value.js'
