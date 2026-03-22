@@ -6,18 +6,16 @@ export function valueToSourceText(value: PropValue): string {
     case 'primitive': {
       if (value.value === null) return 'null'
       if (value.value === undefined) return 'undefined'
-      if (typeof value.value === 'string') {
-        // Use backtick template if contains ${
-        if (value.value.includes('${')) {
-          return '`' + value.value.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`'
-        }
-        return JSON.stringify(value.value)
-      }
+      if (typeof value.value === 'string') return JSON.stringify(value.value)
       return String(value.value)
     }
 
+    case 'template': {
+      return '`' + value.value.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`'
+    }
+
     case 'functionCall': {
-      const args = value.args.map(a => valueToSourceText(a)).join(', ')
+      const args = value.args.map(valueToSourceText).join(', ')
       return `${value.callee}(${args})`
     }
 
@@ -50,7 +48,7 @@ export function collectImports(value: PropValue): ImportSpecifier[] {
 
   function walk(v: PropValue) {
     if (v.kind === 'functionCall') {
-      imports.push(v.import)
+      if (v.import) imports.push(v.import)
       v.args.forEach(walk)
     } else if (v.kind === 'object') {
       Object.values(v.properties).forEach(walk)

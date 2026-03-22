@@ -160,9 +160,19 @@ export function parseValueFromExpression(
     return { kind: 'primitive', value: undefined }
   }
 
-  // Template literals
+  // Template literals (no interpolation)
   if (ts.isNoSubstitutionTemplateLiteral(node)) {
     return { kind: 'primitive', value: node.text }
+  }
+
+  // Template expressions with interpolation: `Hello ${name}`
+  if (ts.isTemplateExpression(node)) {
+    let result = node.head.text
+    for (const span of node.templateSpans) {
+      result += `\${${span.expression.getText(sourceFile)}}`
+      result += span.literal.text
+    }
+    return { kind: 'template', value: result }
   }
 
   // Array literals
@@ -195,7 +205,7 @@ export function parseValueFromExpression(
       kind: 'functionCall',
       callee,
       args,
-      import: importSpec ?? { name: callee, from: '' },
+      ...(importSpec ? { import: importSpec } : {}),
     }
   }
 

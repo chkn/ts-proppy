@@ -8,8 +8,13 @@ describe('valueToSourceText', () => {
     expect(valueToSourceText(val)).toBe('"hello"')
   })
 
-  test('serializes string with template expression using backticks', () => {
+  test('serializes primitive string with ${ literally (no backticks)', () => {
     const val: PropValue = { kind: 'primitive', value: 'Hello ${name}!' }
+    expect(valueToSourceText(val)).toBe('"Hello ${name}!"')
+  })
+
+  test('serializes template value using backticks', () => {
+    const val: PropValue = { kind: 'template', value: 'Hello ${name}!' }
     expect(valueToSourceText(val)).toBe('`Hello ${name}!`')
   })
 

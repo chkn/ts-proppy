@@ -14,6 +14,7 @@ import { ObjectEditor } from './editors/ObjectEditor.js'
 import { ArrayEditor } from './editors/ArrayEditor.js'
 import { TupleEditor } from './editors/TupleEditor.js'
 import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
+import { TemplateEditor } from './editors/TemplateEditor.js'
 
 interface ItemEditorInternalProps {
   propDef: PropDefinition
@@ -33,6 +34,11 @@ export function ItemEditor({ value, onChange, propDef, plugins }: ItemEditorInte
         return <PluginComponent propDef={propDef} value={value} onChange={onChange} />
       }
     }
+  }
+
+  // Template values, or string properties with interpolatables available
+  if (value?.kind === 'template' || (type.syntax === 'string' && propDef.interpolatables?.length)) {
+    return <TemplateEditor propDef={propDef} value={value} onChange={onChange} />
   }
 
   // Function types

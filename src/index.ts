@@ -1,6 +1,6 @@
 // Types
 export type { PropType } from './types/prop-type.js'
-export type { PropDefinition } from './types/prop-definition.js'
+export type { PropDefinition, InterpolatableIdentifier } from './types/prop-definition.js'
 export type { PropValue, ImportSpecifier } from './types/prop-value.js'
 export type { ExtractedProps, InsertionPoint } from './types/extracted-props.js'
 export type { DiscriminatedUnionCase, DiscriminatedUnionInfo } from './types/discriminated-union.js'
@@ -11,6 +11,7 @@ export { getDiscriminatedUnionInfo } from './types/discriminated-union.js'
 export { extractPropertiesFromTypeNode } from './extraction/extract-properties.js'
 export { extractPropertiesFromObjectLiteral } from './extraction/extract-values.js'
 export { buildPropType } from './extraction/build-prop-type.js'
+export { findTypeDeclaration, extractPropertiesFromDeclaration, parseValueFromExpression } from './extraction/helpers.js'
 
 // Editing
 export { valueToSourceText, collectImports } from './editing/value-to-source.js'
