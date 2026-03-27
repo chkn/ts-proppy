@@ -2,22 +2,31 @@ import ts from 'typescript'
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropValue } from '../types/prop-value.js'
 import type { ExtractedProps, InsertionPoint } from '../types/extracted-props.js'
-import { parseValueFromExpression } from './helpers.js'
+import { parseValueFromExpression, inferPropTypeFromExpression } from './helpers.js'
 
 /**
  * Extract properties with their current values from an object literal expression.
- * Returns ExtractedProps with definitions (including valueSpan/fullSpan), parsed PropValues, and insertion context.
+ *
+ * When `definitions` is provided, values are matched to existing definitions by
+ * name and the definitions are enriched with source spans.
+ *
+ * When `definitions` is `undefined` (schemaless mode), a {@link PropDefinition}
+ * is auto-generated for every property in the object literal with its type
+ * inferred from the expression shape.
+ *
+ * @returns ExtractedProps with definitions (including valueSpan/fullSpan), parsed PropValues, and insertion context.
  */
 export function extractPropertiesFromObjectLiteral(
   objectLiteral: ts.ObjectLiteralExpression,
-  definitions: PropDefinition[],
+  definitions: PropDefinition[] | undefined,
   sourceFile: ts.SourceFile
 ): ExtractedProps {
   const values: Record<string, PropValue> = {}
   const fullText = sourceFile.getFullText()
+  const schemaless = definitions === undefined
 
   // Clone definitions and add spans
-  const defsWithSpans: PropDefinition[] = definitions.map(d => ({ ...d }))
+  const defsWithSpans: PropDefinition[] = schemaless ? [] : definitions.map(d => ({ ...d }))
 
   for (const prop of objectLiteral.properties) {
     if (!ts.isPropertyAssignment(prop)) continue
@@ -26,27 +35,42 @@ export function extractPropertiesFromObjectLiteral(
     // Parse the value
     values[name] = parseValueFromExpression(prop.initializer, sourceFile)
 
-    // Find the matching definition and add spans
-    const def = defsWithSpans.find(d => d.name === name)
-    if (def) {
-      def.valueSpan = {
-        start: prop.initializer.getStart(sourceFile),
-        end: prop.initializer.getEnd(),
-      }
+    // Compute spans
+    const valueSpan = {
+      start: prop.initializer.getStart(sourceFile),
+      end: prop.initializer.getEnd(),
+    }
 
-      let fullEnd = prop.getEnd()
-      if (fullText[fullEnd] === ',') fullEnd++
-      // Include trailing whitespace/newline
-      while (fullEnd < fullText.length && (fullText[fullEnd] === ' ' || fullText[fullEnd] === '\t')) {
-        fullEnd++
-      }
-      if (fullEnd < fullText.length && fullText[fullEnd] === '\n') {
-        fullEnd++
-      }
+    let fullEnd = prop.getEnd()
+    if (fullText[fullEnd] === ',') fullEnd++
+    // Include trailing whitespace/newline
+    while (fullEnd < fullText.length && (fullText[fullEnd] === ' ' || fullText[fullEnd] === '\t')) {
+      fullEnd++
+    }
+    if (fullEnd < fullText.length && fullText[fullEnd] === '\n') {
+      fullEnd++
+    }
 
-      def.fullSpan = {
-        start: prop.getFullStart(),
-        end: fullEnd,
+    const fullSpan = {
+      start: prop.getFullStart(),
+      end: fullEnd,
+    }
+
+    if (schemaless) {
+      // Auto-generate definition with inferred type
+      defsWithSpans.push({
+        name,
+        type: inferPropTypeFromExpression(prop.initializer, sourceFile),
+        optional: false,
+        valueSpan,
+        fullSpan,
+      })
+    } else {
+      // Find the matching definition and add spans
+      const def = defsWithSpans.find(d => d.name === name)
+      if (def) {
+        def.valueSpan = valueSpan
+        def.fullSpan = fullSpan
       }
     }
   }

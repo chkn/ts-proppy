@@ -11,7 +11,7 @@ export { getDiscriminatedUnionInfo } from './types/discriminated-union.js'
 export { extractPropertiesFromTypeNode } from './extraction/extract-properties.js'
 export { extractPropertiesFromObjectLiteral } from './extraction/extract-values.js'
 export { buildPropType } from './extraction/build-prop-type.js'
-export { findTypeDeclaration, extractPropertiesFromDeclaration, parseValueFromExpression } from './extraction/helpers.js'
+export { findTypeDeclaration, extractPropertiesFromDeclaration, parseValueFromExpression, inferPropTypeFromExpression } from './extraction/helpers.js'
 
 // Editing
 export { valueToSourceText, collectImports } from './editing/value-to-source.js'

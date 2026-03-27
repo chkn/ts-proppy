@@ -1,6 +1,13 @@
 import React, { useRef, useLayoutEffect, useEffect } from 'react'
 import type { ItemEditorProps } from '../types.js'
 
+export interface TemplateEditorProps extends ItemEditorProps {
+  className?: string
+  placeholder?: string
+  readOnly?: boolean
+  onBlur?: () => void
+}
+
 function escapeHTML(text: string): string {
   return text
     .replace(/&/g, '&amp;')
@@ -141,8 +148,10 @@ function setTextOffset(root: HTMLElement, targetOffset: number | null): void {
   selection.addRange(range)
 }
 
-export function TemplateEditor({ value, onChange }: ItemEditorProps) {
-  const strValue = value?.kind === 'template' ? value.value : ''
+export function TemplateEditor({ value, onChange, className, placeholder, readOnly, onBlur }: TemplateEditorProps) {
+  const strValue = value?.kind === 'template' ? value.value
+    : value?.kind === 'primitive' && typeof value.value === 'string' ? value.value
+    : ''
   const editorRef = useRef<HTMLDivElement>(null)
   const lastExternal = useRef(strValue)
 
@@ -191,12 +200,15 @@ export function TemplateEditor({ value, onChange }: ItemEditorProps) {
   return (
     <div
       ref={editorRef}
-      contentEditable
+      contentEditable={!readOnly}
       suppressContentEditableWarning
+      className={className}
+      data-placeholder={placeholder}
       onInput={handleInput}
       onPaste={handlePaste}
       onKeyDown={handleKeyDown}
-      style={{
+      onBlur={onBlur}
+      style={className ? undefined : {
         width: '100%',
         padding: '4px 6px',
         border: '1px solid #ddd',

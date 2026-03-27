@@ -3,10 +3,7 @@ import ts from 'typescript'
 import { extractPropertiesFromObjectLiteral } from '../extract-values.js'
 import type { PropDefinition } from '../../types/prop-definition.js'
 
-function extractValues(source: string, definitions: PropDefinition[]) {
-  const sourceFile = ts.createSourceFile('test.ts', source, ts.ScriptTarget.Latest, true)
-
-  // Find the object literal expression
+function findObjectLiteral(sourceFile: ts.SourceFile): ts.ObjectLiteralExpression {
   let objLiteral: ts.ObjectLiteralExpression | undefined
   function visit(node: ts.Node) {
     if (ts.isObjectLiteralExpression(node) && !objLiteral) {
@@ -15,9 +12,13 @@ function extractValues(source: string, definitions: PropDefinition[]) {
     ts.forEachChild(node, visit)
   }
   visit(sourceFile)
-
   if (!objLiteral) throw new Error('No object literal found')
-  return extractPropertiesFromObjectLiteral(objLiteral, definitions, sourceFile)
+  return objLiteral
+}
+
+function extractValues(source: string, definitions: PropDefinition[] | undefined = undefined) {
+  const sourceFile = ts.createSourceFile('test.ts', source, ts.ScriptTarget.Latest, true)
+  return extractPropertiesFromObjectLiteral(findObjectLiteral(sourceFile), definitions, sourceFile)
 }
 
 const simpleDefs: PropDefinition[] = [
@@ -135,5 +136,80 @@ describe('extractPropertiesFromObjectLiteral', () => {
     if (result.values!.onClick.kind === 'lambda') {
       expect(result.values!.onClick.parameters).toEqual(['e'])
     }
+  })
+})
+
+describe('extractPropertiesFromObjectLiteral (schemaless)', () => {
+  test('auto-generates definitions with inferred types', () => {
+    const source = `const x = { name: "Alice", age: 30, active: true }`
+    const result = extractValues(source)
+
+    expect(result.definitions).toHaveLength(3)
+    expect(result.definitions[0]).toMatchObject({ name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false })
+    expect(result.definitions[1]).toMatchObject({ name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: false })
+    expect(result.definitions[2]).toMatchObject({ name: 'active', type: { kind: 'primitive', syntax: 'boolean' }, optional: false })
+  })
+
+  test('extracts values alongside definitions', () => {
+    const source = `const x = { name: "Alice", count: 42 }`
+    const result = extractValues(source)
+
+    expect(result.values!.name).toEqual({ kind: 'primitive', value: 'Alice' })
+    expect(result.values!.count).toEqual({ kind: 'primitive', value: 42 })
+  })
+
+  test('populates valueSpan and fullSpan', () => {
+    const source = `const x = { name: "Alice", age: 30 }`
+    const result = extractValues(source)
+
+    const nameDef = result.definitions.find(d => d.name === 'name')!
+    expect(nameDef.valueSpan).toBeDefined()
+    expect(source.slice(nameDef.valueSpan!.start, nameDef.valueSpan!.end)).toBe('"Alice"')
+    expect(nameDef.fullSpan).toBeDefined()
+  })
+
+  test('infers array type from first element', () => {
+    const source = `const x = { items: ["a", "b"] }`
+    const result = extractValues(source)
+
+    expect(result.definitions[0].type).toMatchObject({ kind: 'array', elementType: { kind: 'primitive', syntax: 'string' } })
+  })
+
+  test('infers object type from properties', () => {
+    const source = `const x = { config: { key: "abc", timeout: 5000 } }`
+    const result = extractValues(source)
+
+    const configType = result.definitions[0].type
+    expect(configType.kind).toBe('object')
+    if (configType.kind === 'object') {
+      expect(configType.properties).toHaveLength(2)
+      expect(configType.properties[0]).toMatchObject({ name: 'key', type: { kind: 'primitive', syntax: 'string' } })
+      expect(configType.properties[1]).toMatchObject({ name: 'timeout', type: { kind: 'primitive', syntax: 'number' } })
+    }
+  })
+
+  test('falls back to any for call expressions', () => {
+    const source = `import { openai } from 'ai'\nconst x = { model: openai("gpt-4") }`
+    const result = extractValues(source)
+
+    expect(result.definitions[0].type).toMatchObject({ kind: 'primitive', syntax: 'any' })
+    expect(result.values!.model.kind).toBe('functionCall')
+  })
+
+  test('provides insertionPoint', () => {
+    const source = `const x = { name: "Alice" }`
+    const result = extractValues(source)
+
+    expect(result.insertionPoint).toBeDefined()
+    expect(result.insertionPoint!.objectEnd).toBeGreaterThan(0)
+  })
+
+  test('handles empty object', () => {
+    const source = `const x = {}`
+    const result = extractValues(source)
+
+    expect(result.definitions).toHaveLength(0)
+    expect(result.values).toEqual({})
+    expect(result.insertionPoint).toBeDefined()
   })
 })

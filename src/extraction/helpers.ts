@@ -128,6 +128,60 @@ export function extractPropertiesFromDeclaration(
   return props
 }
 
+/**
+ * Infer a {@link PropType} from an expression's shape without a TypeChecker.
+ *
+ * Covers literals, array/object literals, and template expressions.
+ * Everything else (call expressions, identifiers, etc.) falls back to
+ * `{ kind: 'primitive', syntax: 'any' }`.
+ */
+export function inferPropTypeFromExpression(
+  node: ts.Expression,
+  sourceFile: ts.SourceFile
+): PropType {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || ts.isTemplateExpression(node)) {
+    return { kind: 'primitive', syntax: 'string' }
+  }
+  if (ts.isNumericLiteral(node) || (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(node.operand))) {
+    return { kind: 'primitive', syntax: 'number' }
+  }
+  if (node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword) {
+    return { kind: 'primitive', syntax: 'boolean' }
+  }
+  if (node.kind === ts.SyntaxKind.NullKeyword || (ts.isIdentifier(node) && node.text === 'undefined')) {
+    return { kind: 'primitive', syntax: 'any' }
+  }
+  if (ts.isArrayLiteralExpression(node)) {
+    const elementType: PropType = node.elements.length > 0
+      ? inferPropTypeFromExpression(node.elements[0] as ts.Expression, sourceFile)
+      : { kind: 'primitive', syntax: 'any' }
+    return { kind: 'array', syntax: `${elementType.syntax}[]`, elementType }
+  }
+  if (ts.isObjectLiteralExpression(node)) {
+    const properties: PropDefinition[] = []
+    for (const prop of node.properties) {
+      if (ts.isPropertySignature(prop) || ts.isPropertyAssignment(prop)) {
+        const name = prop.name!.getText(sourceFile)
+        const initExpr = ts.isPropertyAssignment(prop) ? prop.initializer : undefined
+        const type: PropType = initExpr
+          ? inferPropTypeFromExpression(initExpr, sourceFile)
+          : { kind: 'primitive', syntax: 'any' }
+        properties.push({ name, type, optional: false })
+      }
+    }
+    return { kind: 'object', syntax: '{...}', properties }
+  }
+  if (ts.isArrowFunction(node)) {
+    const params: PropDefinition[] = node.parameters.map(p => ({
+      name: p.name.getText(sourceFile),
+      type: { kind: 'primitive' as const, syntax: 'any' },
+      optional: !!p.questionToken,
+    }))
+    return { kind: 'function', syntax: node.getText(sourceFile), parameters: params }
+  }
+  return { kind: 'primitive', syntax: 'any' }
+}
+
 export function parseValueFromExpression(
   node: ts.Expression,
   sourceFile: ts.SourceFile
@@ -205,7 +259,7 @@ export function parseValueFromExpression(
       kind: 'functionCall',
       callee,
       args,
-      ...(importSpec ? { import: importSpec } : {}),
+      import: importSpec,
     }
   }
 
@@ -230,7 +284,7 @@ export function parseValueFromExpression(
 function findImportForIdentifier(
   sourceFile: ts.SourceFile,
   name: string
-): { name: string; from: string; isDefault?: boolean } | null {
+): { name: string; from: string; isDefault?: boolean } | undefined {
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement)) continue
     if (!ts.isStringLiteral(statement.moduleSpecifier)) continue
@@ -252,5 +306,4 @@ function findImportForIdentifier(
       }
     }
   }
-  return null
 }
