@@ -43,11 +43,9 @@ export function extractPropertiesFromObjectLiteral(
 
     let fullEnd = prop.getEnd()
     if (fullText[fullEnd] === ',') fullEnd++
-    // Include trailing whitespace/newline
+    // Include trailing inline whitespace (spaces/tabs) but not the newline —
+    // the newline belongs to the next line (next property or closing brace).
     while (fullEnd < fullText.length && (fullText[fullEnd] === ' ' || fullText[fullEnd] === '\t')) {
-      fullEnd++
-    }
-    if (fullEnd < fullText.length && fullText[fullEnd] === '\n') {
       fullEnd++
     }
 

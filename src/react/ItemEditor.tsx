@@ -21,9 +21,10 @@ interface ItemEditorInternalProps {
   value: PropValue | undefined
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
+  className?: string
 }
 
-export function ItemEditor({ value, onChange, propDef, plugins }: ItemEditorInternalProps) {
+export function ItemEditor({ value, onChange, propDef, plugins, className }: ItemEditorInternalProps) {
   const { type } = propDef
 
   // Check plugins first
@@ -38,7 +39,7 @@ export function ItemEditor({ value, onChange, propDef, plugins }: ItemEditorInte
 
   // Template values, or string properties with interpolatables available
   if (value?.kind === 'template' || (type.syntax === 'string' && propDef.interpolatables?.length)) {
-    return <TemplateEditor propDef={propDef} value={value} onChange={onChange} />
+    return <TemplateEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
   // Function types
@@ -71,7 +72,7 @@ export function ItemEditor({ value, onChange, propDef, plugins }: ItemEditorInte
 
   // Constant unions (dropdown)
   if (type.kind === 'union' && type.types.every(t => t.kind === 'constant')) {
-    return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} />
+    return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
   // Date type
@@ -81,17 +82,17 @@ export function ItemEditor({ value, onChange, propDef, plugins }: ItemEditorInte
 
   // String primitive
   if (type.syntax === 'string') {
-    return <StringEditor propDef={propDef} value={value} onChange={onChange} />
+    return <StringEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
   // Number primitive
   if (type.syntax === 'number') {
-    return <NumberEditor propDef={propDef} value={value} onChange={onChange} />
+    return <NumberEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
   // Boolean primitive
   if (type.syntax === 'boolean') {
-    return <BooleanEditor propDef={propDef} value={value} onChange={onChange} />
+    return <BooleanEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
   // Object types with known properties
@@ -100,5 +101,5 @@ export function ItemEditor({ value, onChange, propDef, plugins }: ItemEditorInte
   }
 
   // Fallback
-  return <JsonFallbackEditor propDef={propDef} value={value} onChange={onChange} />
+  return <JsonFallbackEditor propDef={propDef} value={value} onChange={onChange} className={className} />
 }

@@ -93,4 +93,46 @@ describe('removeProperty', () => {
     expect(result).not.toContain('name')
     expect(result).toContain('age: 30')
   })
+
+  test('preserves newline before closing brace when removing the last property', () => {
+    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`
+    const defs: PropDefinition[] = [
+      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
+      { name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: false },
+    ]
+    const extracted = setupSource(source, defs)
+    const ageDef = extracted.definitions.find(d => d.name === 'age')!
+
+    const result = removeProperty(source, ageDef)
+    expect(result).toBe(`const x = {\n  name: "Alice",\n}`)
+  })
+
+  test('preserves leading newline of next property when removing a non-last property', () => {
+    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`
+    const defs: PropDefinition[] = [
+      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
+      { name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: false },
+    ]
+    const extracted = setupSource(source, defs)
+    const nameDef = extracted.definitions.find(d => d.name === 'name')!
+
+    const result = removeProperty(source, nameDef)
+    expect(result).toBe(`const x = {\n  age: 30\n}`)
+  })
+
+  test('add then remove round-trips back to original source', () => {
+    const source = `const x = {\n  messages: [{ role: 'user', content: 'Test 1' }]\n}`
+    const defs: PropDefinition[] = [
+      { name: 'messages', type: { kind: 'primitive', syntax: 'any' }, optional: false },
+    ]
+    const extracted = setupSource(source, defs)
+    const afterAdd = addProperty(source, extracted, 'temperature', { kind: 'primitive', value: 0 })
+
+    const allDefs = [...defs, { name: 'temperature', type: { kind: 'primitive', syntax: 'number' }, optional: false }]
+    const extractedAfterAdd = setupSource(afterAdd, allDefs)
+    const tempDef = extractedAfterAdd.definitions.find(d => d.name === 'temperature')!
+    const result = removeProperty(afterAdd, tempDef)
+
+    expect(result).toBe(source)
+  })
 })

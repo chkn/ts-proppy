@@ -14,6 +14,7 @@ export interface ItemEditorProps {
   propDef: PropDefinition
   value: PropValue | undefined
   onChange: (value: PropValue) => void
+  className?: string
 }
 
 export interface EditorPlugin {
