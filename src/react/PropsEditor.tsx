@@ -5,7 +5,7 @@ import type { PropValue } from '../types/prop-value.js'
 import { ItemEditor } from './ItemEditor.js'
 import { RichEditor } from './RichEditor.js'
 import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
-import { valueToSourceText } from '../editing/value-to-source.js'
+import { valueToSourceText } from '../react.js'
 
 function isComplexType(propDef: PropDefinition): boolean {
   const { type } = propDef

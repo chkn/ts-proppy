@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { valueToSourceText } from '../value-to-source.js'
+import { valueToSourceText } from '../value-to-string.js'
 import type { PropValue } from '../../types/prop-value.js'
 
 describe('valueToSourceText', () => {

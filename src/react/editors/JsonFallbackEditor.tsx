@@ -1,6 +1,6 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
-import { valueToSourceText } from '../../editing/value-to-source.js'
+import { valueToSourceText } from '../../editing/value-to-string.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
 
 export function JsonFallbackEditor({ value, onChange, propDef, className }: ItemEditorProps) {

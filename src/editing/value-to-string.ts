@@ -1,5 +1,10 @@
 import type { PropValue, ImportSpecifier } from '../types/prop-value.js'
 
+export function valueToDisplayString(value: PropValue): string {
+  if (value.displayValue !== undefined) return value.displayValue
+  return valueToSourceText(value)
+}
+
 /** Convert a PropValue to TypeScript source text */
 export function valueToSourceText(value: PropValue): string {
   switch (value.kind) {

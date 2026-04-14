@@ -1,7 +1,7 @@
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropValue } from '../types/prop-value.js'
 import type { ExtractedProps } from '../types/extracted-props.js'
-import { valueToSourceText, collectImports } from './value-to-source.js'
+import { valueToSourceText, collectImports } from './value-to-string.js'
 import { ensureImport } from './ensure-import.js'
 
 /** Update an existing property value in source code */

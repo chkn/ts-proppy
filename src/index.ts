@@ -14,9 +14,9 @@ export { buildPropType } from './extraction/build-prop-type.js'
 export { findTypeDeclaration, extractPropertiesFromDeclaration, parseValueFromExpression, inferPropTypeFromExpression } from './extraction/helpers.js'
 
 // Editing
-export { valueToSourceText, collectImports } from './editing/value-to-source.js'
+export { collectImports, valueToDisplayString, valueToSourceText } from './editing/value-to-string.js'
 export { ensureImport } from './editing/ensure-import.js'
-export { updateProperty, addProperty, removeProperty } from './editing/apply-value.js'
+export { addProperty, removeProperty, updateProperty } from './editing/apply-value.js'
 
 // Materialization
 export { materializeValue } from './materialize/materialize-value.js'
