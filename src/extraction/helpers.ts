@@ -263,6 +263,35 @@ export function parseValueFromExpression(
     }
   }
 
+  // Concatenated string literals: "a" + "b" + expr
+  if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+    function collectConcatParts(n: ts.Expression): PropValue[] {
+      if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+        return [...collectConcatParts(n.left), ...collectConcatParts(n.right)]
+      }
+      return [parseValueFromExpression(n, sourceFile)]
+    }
+    const parts = collectConcatParts(node)
+
+    if (parts.every(p => p.kind === 'primitive' && (typeof p.value === 'string' || typeof p.value === 'number'))) {
+      return { kind: 'primitive', value: parts.map(p => String((p as Extract<PropValue, { kind: 'primitive' }>).value)).join('') }
+    }
+
+    let templateValue = ''
+    for (const part of parts) {
+      if (part.kind === 'primitive' && (typeof part.value === 'string' || typeof part.value === 'number')) {
+        templateValue += String(part.value)
+      } else if (part.kind === 'template') {
+        templateValue += part.value
+      } else if (part.kind === 'raw') {
+        templateValue += `\${${part.sourceText}}`
+      } else {
+        return { kind: 'raw', sourceText: node.getText(sourceFile) }
+      }
+    }
+    return { kind: 'template', value: templateValue }
+  }
+
   // Arrow functions
   if (ts.isArrowFunction(node)) {
     const parameters = node.parameters.map(p => p.name.getText(sourceFile))

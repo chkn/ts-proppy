@@ -213,3 +213,56 @@ describe('extractPropertiesFromObjectLiteral (schemaless)', () => {
     expect(result.insertionPoint).toBeDefined()
   })
 })
+
+describe('parseValueFromExpression – string concatenation', () => {
+  test('collapses all-literal concatenation into a primitive string', () => {
+    const result = extractValues(`const x = { label: "Hello" + ", " + "world" }`)
+    expect(result.values!.label).toEqual({ kind: 'primitive', value: 'Hello, world' })
+  })
+
+  test('collapses two-operand literal concatenation', () => {
+    const result = extractValues(`const x = { label: "foo" + "bar" }`)
+    expect(result.values!.label).toEqual({ kind: 'primitive', value: 'foobar' })
+  })
+
+  test('produces a template when an identifier is mixed in', () => {
+    const result = extractValues(`const x = { greeting: "Hello " + name }`)
+    expect(result.values!.greeting).toEqual({ kind: 'template', value: 'Hello ${name}' })
+  })
+
+  test('produces a template for identifier + literal', () => {
+    const result = extractValues(`const x = { path: base + "/suffix" }`)
+    expect(result.values!.path).toEqual({ kind: 'template', value: '${base}/suffix' })
+  })
+
+  test('includes a number literal as a string segment', () => {
+    const result = extractValues(`const x = { label: "count: " + 42 }`)
+    expect(result.values!.label).toEqual({ kind: 'primitive', value: 'count: 42' })
+  })
+
+  test('falls back to raw for non-string/identifier operands like function calls', () => {
+    const result = extractValues(`const x = { label: "prefix-" + fn() }`)
+    expect(result.values!.label.kind).toBe('raw')
+  })
+
+  test('appends a literal after a template expression', () => {
+    const result = extractValues('const x = { msg: `Hello ${name}` + "!" }')
+    expect(result.values!.msg).toEqual({ kind: 'template', value: 'Hello ${name}!' })
+  })
+
+  test('prepends a literal before a template expression', () => {
+    const result = extractValues('const x = { msg: "prefix: " + `${value} end` }')
+    expect(result.values!.msg).toEqual({ kind: 'template', value: 'prefix: ${value} end' })
+  })
+
+  test('concatenates two template expressions', () => {
+    const result = extractValues('const x = { msg: `${a} foo` + ` bar ${b}` }')
+    expect(result.values!.msg).toEqual({ kind: 'template', value: '${a} foo bar ${b}' })
+  })
+
+  test('concatenates a no-substitution template with a literal string', () => {
+    // `hello` parses to primitive, so the result should also be primitive
+    const result = extractValues('const x = { msg: `hello` + " world" }')
+    expect(result.values!.msg).toEqual({ kind: 'primitive', value: 'hello world' })
+  })
+})
