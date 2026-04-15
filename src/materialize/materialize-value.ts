@@ -54,7 +54,7 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
         fn = scope?.[value.callee]
         source = 'scope'
       } else {
-        const mod = await import(value.import.from)
+        const mod = await import(/* @vite-ignore */ value.import.from)
         fn = value.import.isDefault ? mod.default : mod[value.import.name]
         source = value.import.from
       }

@@ -71,61 +71,54 @@ export function extractPropertyFromSignature(
   return propDef
 }
 
-export function extractPropertiesFromDeclaration(
-  decl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration,
+/**
+ * Collect a map of property name → type node for the members of a type
+ * literal. Used to resolve field types for destructured parameters.
+ */
+export function collectObjectFieldTypes(
+  typeNode: ts.TypeNode,
   sourceFile: ts.SourceFile,
   typeChecker?: ts.TypeChecker
-): PropDefinition[] {
-  const props: PropDefinition[] = []
+): Map<string, ts.TypeNode> {
+  const map = new Map<string, ts.TypeNode>()
 
-  if (ts.isInterfaceDeclaration(decl)) {
-    if (decl.heritageClauses) {
-      for (const heritageClause of decl.heritageClauses) {
-        if (heritageClause.token === ts.SyntaxKind.ExtendsKeyword) {
-          for (const typeExpr of heritageClause.types) {
-            let baseDecl: ts.InterfaceDeclaration | ts.TypeAliasDeclaration | null = null
-            let baseSrcFile = sourceFile
+  const addFromTypeLiteral = (literal: ts.TypeLiteralNode) => {
+    for (const member of literal.members) {
+      if (ts.isPropertySignature(member) && member.name && member.type) {
+        map.set(member.name.getText(sourceFile), member.type)
+      }
+    }
+  }
 
-            if (typeChecker) {
-              const type = typeChecker.getTypeAtLocation(typeExpr)
-              const symbol = type.getSymbol()
-              if (symbol && symbol.declarations && symbol.declarations.length > 0) {
-                const d = symbol.declarations[0]
-                if (ts.isInterfaceDeclaration(d) || ts.isTypeAliasDeclaration(d)) {
-                  baseDecl = d
-                  baseSrcFile = d.getSourceFile()
-                }
-              }
-            } else {
-              const typeName = typeExpr.expression.getText(sourceFile)
-              baseDecl = findTypeDeclaration(sourceFile, typeName)
-            }
-
-            if (baseDecl) {
-              const inheritedProps = extractPropertiesFromDeclaration(baseDecl, baseSrcFile, typeChecker)
-              props.push(...inheritedProps)
-            }
-          }
+  if (ts.isTypeLiteralNode(typeNode)) {
+    addFromTypeLiteral(typeNode)
+  } else if (ts.isTypeReferenceNode(typeNode)) {
+    const typeName = typeNode.typeName.getText(sourceFile)
+    let decl = findTypeDeclaration(sourceFile, typeName)
+    if (!decl && typeChecker) {
+      const type = typeChecker.getTypeAtLocation(typeNode)
+      const symbol = type.getSymbol()
+      if (symbol && symbol.declarations && symbol.declarations.length > 0) {
+        const d = symbol.declarations[0]
+        if (ts.isInterfaceDeclaration(d) || ts.isTypeAliasDeclaration(d)) {
+          decl = d
         }
       }
     }
-
-    for (const member of decl.members) {
-      if (ts.isPropertySignature(member) && member.name) {
-        props.push(extractPropertyFromSignature(member, sourceFile, typeChecker))
-      }
-    }
-  } else if (ts.isTypeAliasDeclaration(decl) && decl.type) {
-    if (ts.isTypeLiteralNode(decl.type)) {
-      for (const member of decl.type.members) {
-        if (ts.isPropertySignature(member) && member.name) {
-          props.push(extractPropertyFromSignature(member, sourceFile, typeChecker))
+    if (decl) {
+      if (ts.isTypeAliasDeclaration(decl) && decl.type && ts.isTypeLiteralNode(decl.type)) {
+        addFromTypeLiteral(decl.type)
+      } else if (ts.isInterfaceDeclaration(decl)) {
+        for (const member of decl.members) {
+          if (ts.isPropertySignature(member) && member.name && member.type) {
+            map.set(member.name.getText(sourceFile), member.type)
+          }
         }
       }
     }
   }
 
-  return props
+  return map
 }
 
 /**

@@ -8,10 +8,10 @@ export type { SourceSpan } from './types/source-location.js'
 export { getDiscriminatedUnionInfo } from './types/discriminated-union.js'
 
 // Extraction
-export { extractPropertiesFromTypeNode } from './extraction/extract-properties.js'
+export { extractPropertiesFromDeclaration, extractPropertiesFromParameters, extractPropertiesFromTypeNode } from './extraction/extract-properties.js'
 export { extractPropertiesFromObjectLiteral } from './extraction/extract-values.js'
 export { buildPropType } from './extraction/build-prop-type.js'
-export { findTypeDeclaration, extractPropertiesFromDeclaration, parseValueFromExpression, inferPropTypeFromExpression } from './extraction/helpers.js'
+export { findTypeDeclaration, parseValueFromExpression, inferPropTypeFromExpression } from './extraction/helpers.js'
 
 // Editing
 export { collectImports, valueToDisplayString, valueToSourceText } from './editing/value-to-string.js'

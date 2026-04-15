@@ -1,11 +1,7 @@
 import ts from 'typescript'
 import type { PropType } from '../types/prop-type.js'
-import type { PropDefinition } from '../types/prop-definition.js'
-import {
-  findTypeDeclaration,
-  extractPropertyFromSignature,
-  extractPropertiesFromDeclaration,
-} from './helpers.js'
+import { findTypeDeclaration } from './helpers.js'
+import { extractDefinitionsFromDeclaration, extractDefinitionsFromTypeNode } from './extract-properties.js'
 
 function isFunctionType(typeNode: ts.TypeNode | undefined): boolean {
   if (!typeNode) return false
@@ -19,7 +15,7 @@ function isFunctionType(typeNode: ts.TypeNode | undefined): boolean {
   return false
 }
 
-function extractLiteralValue(typeNode: ts.LiteralTypeNode, sourceFile: ts.SourceFile): string {
+function extractLiteralValue(typeNode: ts.LiteralTypeNode, sourceFile: ts.SourceFile): unknown {
   const rawValue = typeNode.literal.getText(sourceFile)
   const jsonValue = rawValue.replace(/^["']|["']$/g, '"')
   try {
@@ -27,44 +23,6 @@ function extractLiteralValue(typeNode: ts.LiteralTypeNode, sourceFile: ts.Source
   } catch {
     return rawValue
   }
-}
-
-function extractFunctionParameters(
-  typeNode: ts.TypeNode,
-  sourceFile: ts.SourceFile,
-  typeChecker?: ts.TypeChecker
-): PropDefinition[] {
-  let functionNode: ts.FunctionTypeNode | undefined
-
-  if (ts.isFunctionTypeNode(typeNode)) {
-    functionNode = typeNode
-  } else if (ts.isParenthesizedTypeNode(typeNode) && ts.isFunctionTypeNode(typeNode.type)) {
-    functionNode = typeNode.type
-  } else if (ts.isUnionTypeNode(typeNode)) {
-    for (const unionMember of typeNode.types) {
-      if (ts.isFunctionTypeNode(unionMember)) {
-        functionNode = unionMember
-        break
-      } else if (ts.isParenthesizedTypeNode(unionMember) && ts.isFunctionTypeNode(unionMember.type)) {
-        functionNode = unionMember.type
-        break
-      }
-    }
-  }
-
-  if (!functionNode) return []
-
-  const parameters: PropDefinition[] = []
-  for (const param of functionNode.parameters) {
-    const name = param.name.getText(sourceFile)
-    const optional = !!param.questionToken
-    const propType: PropType = param.type
-      ? buildPropType(param.type, sourceFile, typeChecker)
-      : { kind: 'primitive', syntax: 'any' }
-    parameters.push({ name, type: propType, optional })
-  }
-
-  return parameters
 }
 
 export function buildPropType(
@@ -100,18 +58,13 @@ export function buildPropType(
 
   // Function types
   if (isFunctionType(typeNode)) {
-    const parameters = extractFunctionParameters(typeNode, sourceFile, typeChecker)
+    const parameters = extractDefinitionsFromTypeNode(typeNode, sourceFile, typeChecker)
     return { kind: 'function', syntax, parameters }
   }
 
   // Type literals (inline objects)
   if (ts.isTypeLiteralNode(typeNode)) {
-    const properties: PropDefinition[] = []
-    for (const member of typeNode.members) {
-      if (ts.isPropertySignature(member) && member.name) {
-        properties.push(extractPropertyFromSignature(member, sourceFile, typeChecker))
-      }
-    }
+    const properties = extractDefinitionsFromTypeNode(typeNode, sourceFile, typeChecker)
     return { kind: 'object', syntax, properties }
   }
 
@@ -139,7 +92,7 @@ export function buildPropType(
         return buildPropType(typeDecl.type, declSourceFile, typeChecker)
       }
       if (ts.isInterfaceDeclaration(typeDecl)) {
-        const properties = extractPropertiesFromDeclaration(typeDecl, declSourceFile, typeChecker)
+        const properties = extractDefinitionsFromDeclaration(typeDecl, declSourceFile, typeChecker)
         if (properties.length > 0) {
           return { kind: 'object', syntax, properties }
         }
