@@ -211,7 +211,9 @@ export function TemplateEditor({ value, onChange, className, placeholder, readOn
       style={className ? undefined : {
         width: '100%',
         padding: '4px 6px',
-        border: '1px solid #ddd',
+        background: 'var(--proppy-input-bg, #fff)',
+        color: 'var(--proppy-input-color, inherit)',
+        border: '1px solid var(--proppy-border, #ddd)',
         borderRadius: '3px',
         fontSize: '12px',
         minHeight: '24px',

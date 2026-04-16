@@ -78,9 +78,9 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
               flexWrap: 'wrap',
               gap: '4px',
             }}>
-              <label style={{ fontSize: '12px', fontWeight: 500 }}>
+              <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--proppy-text-primary, inherit)' }}>
                 {propDef.name}{propDef.optional ? '' : ' *'}
-                <span style={{ color: '#999', fontWeight: 'normal', marginLeft: '4px' }}>
+                <span style={{ color: 'var(--proppy-text-muted, #999)', fontWeight: 'normal', marginLeft: '4px' }}>
                   {propDef.type.syntax}
                 </span>
               </label>
@@ -90,8 +90,9 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
                   style={{
                     fontSize: '10px',
                     padding: '2px 6px',
-                    background: '#f5f5f5',
-                    border: '1px solid #ddd',
+                    background: 'var(--proppy-button-bg, #f5f5f5)',
+                    color: 'var(--proppy-button-color, inherit)',
+                    border: '1px solid var(--proppy-border, #ddd)',
                     borderRadius: '3px',
                     cursor: 'pointer',
                   }}
@@ -101,12 +102,12 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
               )}
             </div>
             {propDef.description && (
-              <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px', fontStyle: 'italic' }}>
+              <div style={{ fontSize: '11px', color: 'var(--proppy-text-secondary, #666)', marginBottom: '4px', fontStyle: 'italic' }}>
                 {propDef.description}
               </div>
             )}
             {propDef.defaultValue && !values?.[propDef.name] && (
-              <div style={{ fontSize: '10px', color: '#999', marginBottom: '4px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--proppy-text-muted, #999)', marginBottom: '4px' }}>
                 Default: {valueToSourceText(propDef.defaultValue)}
               </div>
             )}
@@ -114,7 +115,7 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
           </div>
         )
       }) : (
-        <p style={{ fontSize: '12px', color: '#999' }}>No props defined</p>
+        <p style={{ fontSize: '12px', color: 'var(--proppy-text-muted, #999)' }}>No props defined</p>
       )}
     </div>
   )

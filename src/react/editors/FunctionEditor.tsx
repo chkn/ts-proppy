@@ -16,12 +16,12 @@ export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
       <div style={{
         fontSize: '11px',
         fontFamily: 'monospace',
-        color: '#666',
+        color: 'var(--proppy-text-secondary, #666)',
         marginBottom: '4px',
         padding: '4px 8px',
-        background: '#f5f5f5',
+        background: 'var(--proppy-button-bg, #f5f5f5)',
         borderRadius: '3px',
-        border: '1px solid #e0e0e0',
+        border: '1px solid var(--proppy-border, #e0e0e0)',
       }}>
         ({paramSignature}) =&gt;
       </div>
@@ -36,7 +36,9 @@ export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
         style={{
           width: '100%',
           padding: '6px 8px',
-          border: '1px solid #ddd',
+          background: 'var(--proppy-input-bg, #fff)',
+          color: 'var(--proppy-input-color, inherit)',
+          border: '1px solid var(--proppy-border, #ddd)',
           borderRadius: '4px',
           fontSize: '12px',
           fontFamily: 'monospace',

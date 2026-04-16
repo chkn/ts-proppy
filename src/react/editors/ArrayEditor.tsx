@@ -32,12 +32,12 @@ export function ArrayEditor({ elementType, value, onChange, plugins }: ArrayEdit
 
   return (
     <div style={{
-      border: '1px solid #ddd',
+      border: '1px solid var(--proppy-border, #ddd)',
       borderRadius: '4px',
       padding: '8px',
-      background: '#fafafa',
+      background: 'var(--proppy-container-bg, #fafafa)',
     }}>
-      <div style={{ marginBottom: '8px', fontSize: '11px', color: '#666' }}>
+      <div style={{ marginBottom: '8px', fontSize: '11px', color: 'var(--proppy-text-secondary, #666)' }}>
         Array of {elementType.syntax} ({elements.length} item{elements.length !== 1 ? 's' : ''})
       </div>
       {elements.map((item, index) => (
@@ -54,8 +54,9 @@ export function ArrayEditor({ elementType, value, onChange, plugins }: ArrayEdit
             onClick={() => removeItem(index)}
             style={{
               padding: '4px 8px',
-              background: '#fee',
-              border: '1px solid #fcc',
+              background: 'var(--proppy-danger-bg, #fee)',
+              color: 'var(--proppy-danger-color, inherit)',
+              border: '1px solid var(--proppy-danger-border, #fcc)',
               borderRadius: '3px',
               cursor: 'pointer',
               fontSize: '12px',
@@ -70,8 +71,9 @@ export function ArrayEditor({ elementType, value, onChange, plugins }: ArrayEdit
         style={{
           width: '100%',
           padding: '6px',
-          background: '#f0f0f0',
-          border: '1px solid #ddd',
+          background: 'var(--proppy-button-bg, #f0f0f0)',
+          color: 'var(--proppy-button-color, inherit)',
+          border: '1px solid var(--proppy-border, #ddd)',
           borderRadius: '3px',
           cursor: 'pointer',
           fontSize: '12px',

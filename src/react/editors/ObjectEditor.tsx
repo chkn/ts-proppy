@@ -21,24 +21,24 @@ export function ObjectEditor({ properties, value, onChange, plugins }: ObjectEdi
 
   return (
     <div style={{
-      border: '1px solid #ddd',
+      border: '1px solid var(--proppy-border, #ddd)',
       borderRadius: '4px',
       padding: '8px',
-      background: '#fafafa',
+      background: 'var(--proppy-container-bg, #fafafa)',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px',
     }}>
       {properties.map(prop => (
         <div key={prop.name}>
-          <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500 }}>
+          <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500, color: 'var(--proppy-text-primary, inherit)' }}>
             {prop.name}{prop.optional ? '' : ' *'}
-            <span style={{ color: '#999', fontWeight: 'normal', marginLeft: '4px' }}>
+            <span style={{ color: 'var(--proppy-text-muted, #999)', fontWeight: 'normal', marginLeft: '4px' }}>
               {prop.type.syntax}
             </span>
           </label>
           {prop.description && (
-            <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px', fontStyle: 'italic' }}>
+            <div style={{ fontSize: '10px', color: 'var(--proppy-text-secondary, #666)', marginBottom: '2px', fontStyle: 'italic' }}>
               {prop.description}
             </div>
           )}

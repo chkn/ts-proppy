@@ -22,19 +22,19 @@ export function TupleEditor({ types, value, onChange, plugins }: TupleEditorProp
 
   return (
     <div style={{
-      border: '1px solid #ddd',
+      border: '1px solid var(--proppy-border, #ddd)',
       borderRadius: '4px',
       padding: '8px',
-      background: '#fafafa',
+      background: 'var(--proppy-container-bg, #fafafa)',
     }}>
-      <div style={{ marginBottom: '8px', fontSize: '11px', color: '#666' }}>
+      <div style={{ marginBottom: '8px', fontSize: '11px', color: 'var(--proppy-text-secondary, #666)' }}>
         Tuple [{types.map(t => t.syntax).join(', ')}]
       </div>
       {types.map((elementType, index) => {
         const elementPropDef = { name: `[${index}]`, type: elementType, optional: false }
         return (
           <div key={index} style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500 }}>
+            <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500, color: 'var(--proppy-text-primary, inherit)' }}>
               [{index}] {elementType.syntax}
             </label>
             <ItemEditor

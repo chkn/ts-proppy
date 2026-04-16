@@ -41,16 +41,16 @@ export function DiscriminatedUnionEditor({
 
   return (
     <div style={{
-      border: '1px solid #ddd',
+      border: '1px solid var(--proppy-border, #ddd)',
       borderRadius: '4px',
       padding: '8px',
-      background: '#fafafa',
+      background: 'var(--proppy-container-bg, #fafafa)',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px',
     }}>
       <div>
-        <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500 }}>
+        <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500, color: 'var(--proppy-text-primary, inherit)' }}>
           {discriminator} *
         </label>
         <select
@@ -59,7 +59,9 @@ export function DiscriminatedUnionEditor({
           style={{
             width: '100%',
             padding: '4px 6px',
-            border: '1px solid #ddd',
+            background: 'var(--proppy-input-bg, #fff)',
+            color: 'var(--proppy-input-color, inherit)',
+            border: '1px solid var(--proppy-border, #ddd)',
             borderRadius: '3px',
             fontSize: '12px',
           }}
@@ -74,17 +76,17 @@ export function DiscriminatedUnionEditor({
 
       {currentCase && currentCase.properties.length > 0 && (
         <>
-          <div style={{ borderTop: '1px solid #ddd', margin: '4px 0' }} />
+          <div style={{ borderTop: '1px solid var(--proppy-border, #ddd)', margin: '4px 0' }} />
           {currentCase.properties.map(prop => (
             <div key={prop.name}>
-              <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500 }}>
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500, color: 'var(--proppy-text-primary, inherit)' }}>
                 {prop.name}{prop.optional ? '' : ' *'}
-                <span style={{ color: '#999', fontWeight: 'normal', marginLeft: '4px' }}>
+                <span style={{ color: 'var(--proppy-text-muted, #999)', fontWeight: 'normal', marginLeft: '4px' }}>
                   {prop.type.syntax}
                 </span>
               </label>
               {prop.description && (
-                <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px', fontStyle: 'italic' }}>
+                <div style={{ fontSize: '10px', color: 'var(--proppy-text-secondary, #666)', marginBottom: '2px', fontStyle: 'italic' }}>
                   {prop.description}
                 </div>
               )}
