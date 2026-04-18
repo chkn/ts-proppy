@@ -68,6 +68,19 @@ describe('addProperty', () => {
     expect(result).toContain('name: "Alice"')
   })
 
+  test('inserts a comma after the last property when it has no trailing comma', () => {
+    const source = `const x = {\n  input: []\n}`
+    const defs: PropDefinition[] = [
+      { name: 'input', type: { kind: 'primitive', syntax: 'any' }, optional: false },
+    ]
+    const extracted = setupSource(source, defs)
+    const newValue: PropValue = { kind: 'primitive', value: 'deep-research' }
+
+    const result = addProperty(source, extracted, 'agent', newValue)
+    expect(result).toContain('input: [],')
+    expect(result).toContain('agent: "deep-research"')
+  })
+
   test('adds a property to an empty object', () => {
     const source = `const x = {}`
     const defs: PropDefinition[] = []
@@ -120,8 +133,8 @@ describe('removeProperty', () => {
     expect(result).toBe(`const x = {\n  age: 30\n}`)
   })
 
-  test('add then remove round-trips back to original source', () => {
-    const source = `const x = {\n  messages: [{ role: 'user', content: 'Test 1' }]\n}`
+  test('add then remove round-trips back to original source (with trailing comma)', () => {
+    const source = `const x = {\n  messages: [{ role: 'user', content: 'Test 1' }],\n}`
     const defs: PropDefinition[] = [
       { name: 'messages', type: { kind: 'primitive', syntax: 'any' }, optional: false },
     ]

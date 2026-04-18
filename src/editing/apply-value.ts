@@ -43,8 +43,9 @@ export function addProperty(
   const hasProperties = lastPropertyEnd !== objectEnd
 
   if (hasProperties) {
-    // Insert after last property
-    const insertText = `\n${indent}${propertyName}: ${valueText},`
+    // Insert after last property; add comma first if the last property has no trailing comma
+    const needsComma = sourceCode[lastPropertyEnd - 1] !== ','
+    const insertText = `${needsComma ? ',' : ''}\n${indent}${propertyName}: ${valueText},`
     result = sourceCode.slice(0, lastPropertyEnd) + insertText + sourceCode.slice(lastPropertyEnd)
   } else {
     // Empty object
