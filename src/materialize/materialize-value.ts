@@ -1,5 +1,4 @@
 import type { PropValue } from '../types/prop-value.js'
-import type { PropType } from '../types/prop-type.js'
 
 /**
  * Materializes a `PropValue` into a concrete runtime value.

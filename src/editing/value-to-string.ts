@@ -38,7 +38,7 @@ export function valueToSourceText(value: PropValue): string {
 
     case 'array':
     case 'tuple': {
-      const els = value.elements.map(e => valueToSourceText(e)).join(', ')
+      const els = value.elements.map(valueToSourceText).join(', ')
       return `[${els}]`
     }
 

@@ -1,7 +1,28 @@
 {
   "name": "ts-proppy",
   "version": "0.1.0",
+  "description": "Extract, edit, and materialize TypeScript prop definitions and values",
+  "keywords": [
+    "typescript",
+    "props",
+    "ast",
+    "react",
+    "editor",
+    "codemod",
+    "introspection"
+  ],
+  "author": "Alex Corrado",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chkn/ts-proppy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chkn/ts-proppy/issues"
+  },
+  "homepage": "https://github.com/chkn/ts-proppy#readme",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -12,11 +33,12 @@
       "import": "./dist/react.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "src", "!src/**/__tests__"],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.react.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test"
   },
   "peerDependencies": {
     "typescript": ">=5.0.0",
