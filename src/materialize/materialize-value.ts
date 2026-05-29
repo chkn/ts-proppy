@@ -1,14 +1,16 @@
 import type { PropValue } from '../types/prop-value.js'
+import { parseInterpolationPath } from '../editing/interpolation.js'
 
 /**
  * Materializes a `PropValue` into a concrete runtime value.
  *
  * @param value - The prop value to materialize.
  * @param scope - Optional map of named values available at materialization time.
- *   - **template**: `${key}` placeholders are replaced with the corresponding scope value.
+ *   - **template**: `${expr}` tokens are replaced with the corresponding scope value;
+ *     dotted/bracket member access (e.g. `config.host`) is walked through nested objects.
  *   - **lambda**: scope keys are prepended as parameters and their values are pre-bound,
  *     so the returned function closes over the scope without requiring the caller to pass them.
- *   - **functionCall** (no `import`): the callee is resolved from scope and invoked.
+ *   - **functionCall** (no import binding): the callee is resolved from scope and invoked.
  *   - All other kinds propagate scope recursively to nested values.
  * @returns The materialized value.
  */
@@ -18,13 +20,19 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
       return value.value
 
     case 'template': {
-      return value.value.replace(/\$\{(\w+)\}/g, (_, key) => {
-        if (scope && key in scope) {
-          return String(scope[key])
-        } else {
-          throw new Error(`Variable '${key}' not found in scope for template string`)
+      let out = ''
+      for (const seg of value.value) {
+        if (typeof seg === 'string') {
+          out += seg
+          continue
         }
-      })
+        const resolved = resolveTokenInScope(seg.expr, scope)
+        if (!resolved.found) {
+          throw new Error(`Variable '${seg.expr}' not found in scope for template string`)
+        }
+        out += String(resolved.value)
+      }
+      return out
     }
 
     case 'object': {
@@ -47,18 +55,19 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
     }
 
     case 'functionCall': {
+      const spec = value.binding?.kind === 'import' ? value.binding.spec : undefined
       let fn: Function
       let source: string
-      if (!value.import) {
+      if (!spec) {
         fn = scope?.[value.callee]
         source = 'scope'
       } else {
-        const mod = await import(/* @vite-ignore */ value.import.from)
-        fn = value.import.isDefault ? mod.default : mod[value.import.name]
-        source = value.import.from
+        const mod = await import(/* @vite-ignore */ spec.from)
+        fn = spec.isDefault ? mod.default : mod[spec.name]
+        source = spec.from
       }
       if (typeof fn !== 'function') {
-        throw new Error(`${value.import?.name ?? value.callee} from '${source}' is not a function`)
+        throw new Error(`${spec?.name ?? value.callee} from '${source}' is not a function`)
       }
       const args = await Promise.all(value.args.map(v => materializeValue(v, scope)))
       return fn(...args)
@@ -68,4 +77,28 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
       throw new Error('Cannot materialize raw value');
     }
   }
+}
+
+/**
+ * Resolve a template token's expression against the scope. A bare key matches
+ * directly; otherwise a plain member-access chain (`config.host`,
+ * `config['host']`) is walked through nested objects. Expressions that aren't
+ * member access (e.g. calls) don't resolve.
+ */
+function resolveTokenInScope(
+  expr: string,
+  scope: Record<string, any> | undefined
+): { found: boolean; value?: unknown } {
+  if (!scope) return { found: false }
+  if (expr in scope) return { found: true, value: scope[expr] }
+
+  const path = parseInterpolationPath(expr)
+  if (!path) return { found: false }
+
+  let cur: unknown = scope
+  for (const key of path) {
+    if (cur == null || typeof cur !== 'object' || !(key in cur)) return { found: false }
+    cur = (cur as Record<string, unknown>)[key]
+  }
+  return { found: true, value: cur }
 }

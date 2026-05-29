@@ -120,8 +120,42 @@ describe('extractPropertiesFromObjectLiteral', () => {
     if (result.values!.model.kind === 'functionCall') {
       expect(result.values!.model.callee).toBe('openai')
       expect(result.values!.model.args).toHaveLength(1)
-      expect(result.values!.model.import.name).toBe('openai')
-      expect(result.values!.model.import.from).toBe('ai')
+      expect(result.values!.model.binding).toEqual({ kind: 'import', spec: { name: 'openai', from: 'ai' } })
+    }
+  })
+
+  test('resolves callee binding to a destructured parameter of an enclosing closure', () => {
+    const source = `
+      import { prompts } from '@evalution/vercel-ai-sdk'
+      export default prompts(({ openai }) => ({ model: openai('gpt-4') }))
+    `
+    const defs: PropDefinition[] = [
+      { name: 'model', type: { kind: 'primitive', syntax: 'any' }, optional: false },
+    ]
+    const result = extractValues(source, defs)
+    const model = result.values!.model
+    expect(model.kind).toBe('functionCall')
+    if (model.kind === 'functionCall') {
+      expect(model.binding).toEqual({
+        kind: 'parameter',
+        enclosingCall: {
+          callee: 'prompts',
+          import: { name: 'prompts', from: '@evalution/vercel-ai-sdk' },
+        },
+      })
+    }
+  })
+
+  test('callee binding is undefined when the identifier resolves to neither parameter nor import', () => {
+    const source = `const localFn = (s: string) => s; const x = { model: localFn('hi') }`
+    const defs: PropDefinition[] = [
+      { name: 'model', type: { kind: 'primitive', syntax: 'any' }, optional: false },
+    ]
+    const result = extractValues(source, defs)
+    const model = result.values!.model
+    expect(model.kind).toBe('functionCall')
+    if (model.kind === 'functionCall') {
+      expect(model.binding).toBeUndefined()
     }
   })
 
@@ -227,12 +261,12 @@ describe('parseValueFromExpression – string concatenation', () => {
 
   test('produces a template when an identifier is mixed in', () => {
     const result = extractValues(`const x = { greeting: "Hello " + name }`)
-    expect(result.values!.greeting).toEqual({ kind: 'template', value: 'Hello ${name}' })
+    expect(result.values!.greeting).toEqual({ kind: 'template', value: ['Hello ', { expr: 'name' }, ''] })
   })
 
   test('produces a template for identifier + literal', () => {
     const result = extractValues(`const x = { path: base + "/suffix" }`)
-    expect(result.values!.path).toEqual({ kind: 'template', value: '${base}/suffix' })
+    expect(result.values!.path).toEqual({ kind: 'template', value: ['', { expr: 'base' }, '/suffix'] })
   })
 
   test('includes a number literal as a string segment', () => {
@@ -247,17 +281,17 @@ describe('parseValueFromExpression – string concatenation', () => {
 
   test('appends a literal after a template expression', () => {
     const result = extractValues('const x = { msg: `Hello ${name}` + "!" }')
-    expect(result.values!.msg).toEqual({ kind: 'template', value: 'Hello ${name}!' })
+    expect(result.values!.msg).toEqual({ kind: 'template', value: ['Hello ', { expr: 'name' }, '!'] })
   })
 
   test('prepends a literal before a template expression', () => {
     const result = extractValues('const x = { msg: "prefix: " + `${value} end` }')
-    expect(result.values!.msg).toEqual({ kind: 'template', value: 'prefix: ${value} end' })
+    expect(result.values!.msg).toEqual({ kind: 'template', value: ['prefix: ', { expr: 'value' }, ' end'] })
   })
 
   test('concatenates two template expressions', () => {
     const result = extractValues('const x = { msg: `${a} foo` + ` bar ${b}` }')
-    expect(result.values!.msg).toEqual({ kind: 'template', value: '${a} foo bar ${b}' })
+    expect(result.values!.msg).toEqual({ kind: 'template', value: ['', { expr: 'a' }, ' foo bar ', { expr: 'b' }, ''] })
   })
 
   test('concatenates a no-substitution template with a literal string', () => {

@@ -13,9 +13,29 @@ describe('valueToSourceText', () => {
     expect(valueToSourceText(val)).toBe('"Hello ${name}!"')
   })
 
-  test('serializes template value using backticks', () => {
-    const val: PropValue = { kind: 'template', value: 'Hello ${name}!' }
+  test('serializes a template with one interp token', () => {
+    const val: PropValue = { kind: 'template', value: ['Hello ', { expr: 'name' }, '!'] }
     expect(valueToSourceText(val)).toBe('`Hello ${name}!`')
+  })
+
+  test('escapes literal ${ that lives in a string segment (not a token)', () => {
+    const val: PropValue = { kind: 'template', value: ['Hello ${name}!'] }
+    expect(valueToSourceText(val)).toBe('`Hello \\${name}!`')
+  })
+
+  test('escapes a literal backslash in a string segment', () => {
+    const val: PropValue = { kind: 'template', value: ['\\path\\to'] }
+    expect(valueToSourceText(val)).toBe('`\\\\path\\\\to`')
+  })
+
+  test('mixes a literal ${name}-looking string and a real token', () => {
+    const val: PropValue = { kind: 'template', value: ['Hello ${name} and ', { expr: 'language' }, ''] }
+    expect(valueToSourceText(val)).toBe('`Hello \\${name} and ${language}`')
+  })
+
+  test('preserves a literal backslash before a token', () => {
+    const val: PropValue = { kind: 'template', value: ['\\', { expr: 'name' }, ''] }
+    expect(valueToSourceText(val)).toBe('`\\\\${name}`')
   })
 
   test('serializes number', () => {
@@ -37,7 +57,7 @@ describe('valueToSourceText', () => {
       kind: 'functionCall',
       callee: 'openai',
       args: [{ kind: 'primitive', value: 'gpt-4' }],
-      import: { name: 'openai', from: 'ai' },
+      binding: { kind: 'import', spec: { name: 'openai', from: 'ai' } },
     }
     expect(valueToSourceText(val)).toBe('openai("gpt-4")')
   })
@@ -97,7 +117,7 @@ describe('valueToSourceText', () => {
         { kind: 'primitive', value: 'gpt-4' },
         { kind: 'object', properties: { temperature: { kind: 'primitive', value: 0.7 } } },
       ],
-      import: { name: 'createModel', from: '@ai/sdk' },
+      binding: { kind: 'import', spec: { name: 'createModel', from: '@ai/sdk' } },
     }
     expect(valueToSourceText(val)).toBe('createModel("gpt-4", { temperature: 0.7 })')
   })

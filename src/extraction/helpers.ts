@@ -1,7 +1,8 @@
 import ts from 'typescript'
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropType } from '../types/prop-type.js'
-import type { PropValue } from '../types/prop-value.js'
+import type { PropValue, CalleeBinding, ImportSpecifier } from '../types/prop-value.js'
+import { TemplateValueBuilder } from '../types/template-value-builder.js'
 import { buildPropType } from './build-prop-type.js'
 
 export function findTypeDeclaration(
@@ -212,14 +213,17 @@ export function parseValueFromExpression(
     return { kind: 'primitive', value: node.text }
   }
 
-  // Template expressions with interpolation: `Hello ${name}`
+  // Template expressions with interpolation: `Hello ${name}`. We use cooked
+  // (`.text`) text for the string segments — any `\${…}` escapes naturally
+  // collapse into literal `${…}` inside a string segment, where they cannot
+  // be confused with a real interp token.
   if (ts.isTemplateExpression(node)) {
-    let result = node.head.text
+    const builder = new TemplateValueBuilder().appendString(node.head.text)
     for (const span of node.templateSpans) {
-      result += `\${${span.expression.getText(sourceFile)}}`
-      result += span.literal.text
+      builder.appendToken(span.expression.getText(sourceFile))
+      builder.appendString(span.literal.text)
     }
-    return { kind: 'template', value: result }
+    return { kind: 'template', value: builder.build() }
   }
 
   // Array literals
@@ -245,14 +249,13 @@ export function parseValueFromExpression(
     const callee = node.expression.getText(sourceFile)
     const args = node.arguments.map(arg => parseValueFromExpression(arg as ts.Expression, sourceFile))
 
-    // Try to find the import for this callee
-    const importSpec = findImportForIdentifier(sourceFile, callee)
+    const binding = resolveCalleeBinding(node, callee, sourceFile)
 
     return {
       kind: 'functionCall',
       callee,
       args,
-      import: importSpec,
+      binding,
     }
   }
 
@@ -270,19 +273,19 @@ export function parseValueFromExpression(
       return { kind: 'primitive', value: parts.map(p => String((p as Extract<PropValue, { kind: 'primitive' }>).value)).join('') }
     }
 
-    let templateValue = ''
+    const builder = new TemplateValueBuilder()
     for (const part of parts) {
       if (part.kind === 'primitive' && (typeof part.value === 'string' || typeof part.value === 'number')) {
-        templateValue += String(part.value)
+        builder.appendString(String(part.value))
       } else if (part.kind === 'template') {
-        templateValue += part.value
+        builder.appendSegments(part.value)
       } else if (part.kind === 'raw') {
-        templateValue += `\${${part.sourceText}}`
+        builder.appendToken(part.sourceText)
       } else {
         return { kind: 'raw', sourceText: node.getText(sourceFile) }
       }
     }
-    return { kind: 'template', value: templateValue }
+    return { kind: 'template', value: builder.build() }
   }
 
   // Arrow functions
@@ -306,7 +309,7 @@ export function parseValueFromExpression(
 function findImportForIdentifier(
   sourceFile: ts.SourceFile,
   name: string
-): { name: string; from: string; isDefault?: boolean } | undefined {
+): ImportSpecifier | undefined {
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement)) continue
     if (!ts.isStringLiteral(statement.moduleSpecifier)) continue
@@ -328,4 +331,100 @@ function findImportForIdentifier(
       }
     }
   }
+}
+
+type FunctionLike = ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction | ts.MethodDeclaration | ts.AccessorDeclaration | ts.ConstructorDeclaration
+
+function isFunctionLike(node: ts.Node): node is FunctionLike {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node) ||
+    ts.isConstructorDeclaration(node)
+  )
+}
+
+/** Does this parameter (including destructured bindings) introduce `name`? */
+function parameterBindsName(param: ts.ParameterDeclaration, name: string): boolean {
+  return bindingNameContains(param.name, name)
+}
+
+function bindingNameContains(b: ts.BindingName, name: string): boolean {
+  if (ts.isIdentifier(b)) return b.text === name
+  if (ts.isObjectBindingPattern(b)) {
+    for (const el of b.elements) {
+      // `{ name }` → propertyName undefined, name is el.name (Identifier or nested pattern)
+      // `{ name: alias }` → propertyName=name, el.name=alias
+      // The introduced binding is el.name.
+      if (bindingNameContains(el.name, name)) return true
+    }
+    return false
+  }
+  if (ts.isArrayBindingPattern(b)) {
+    for (const el of b.elements) {
+      if (ts.isBindingElement(el) && bindingNameContains(el.name, name)) return true
+    }
+    return false
+  }
+  return false
+}
+
+/**
+ * Resolve where `callee` is bound at the given call site.
+ *
+ * Preference order:
+ * 1. Parameter of an enclosing function (innermost wins). If that function is
+ *    passed as an argument to another call expression, that call's identity is
+ *    attached as `enclosingCall`.
+ * 2. Top-level import.
+ */
+function resolveCalleeBinding(
+  callNode: ts.CallExpression,
+  callee: string,
+  sourceFile: ts.SourceFile,
+): CalleeBinding | undefined {
+  // Only resolve bare identifiers; `a.b()` style is left unbound.
+  if (!ts.isIdentifier(callNode.expression)) {
+    return undefined
+  }
+
+  // Walk up looking for an enclosing function whose params bind `callee`.
+  let cur: ts.Node | undefined = callNode.parent
+  while (cur) {
+    if (isFunctionLike(cur)) {
+      const fn = cur
+      if (fn.parameters.some(p => parameterBindsName(p, callee))) {
+        const enclosingCall = describeEnclosingCall(fn, sourceFile)
+        return enclosingCall
+          ? { kind: 'parameter', enclosingCall }
+          : { kind: 'parameter' }
+      }
+    }
+    cur = cur.parent
+  }
+
+  // Fall back to top-level import.
+  const spec = findImportForIdentifier(sourceFile, callee)
+  return spec ? { kind: 'import', spec } : undefined
+}
+
+/**
+ * If `fn` is itself passed as an argument to a call expression — e.g. the
+ * `(({ openai }) => …)` in `prompts(({ openai }) => …)` — return the outer
+ * call's callee identity. Otherwise undefined.
+ */
+function describeEnclosingCall(
+  fn: FunctionLike,
+  sourceFile: ts.SourceFile,
+): { callee: string; import?: ImportSpecifier } | undefined {
+  const parent = fn.parent
+  if (!parent || !ts.isCallExpression(parent)) return undefined
+  if (!parent.arguments.includes(fn as ts.Expression)) return undefined
+  if (!ts.isIdentifier(parent.expression)) return undefined
+  const calleeName = parent.expression.text
+  const spec = findImportForIdentifier(sourceFile, calleeName)
+  return spec ? { callee: calleeName, import: spec } : { callee: calleeName }
 }

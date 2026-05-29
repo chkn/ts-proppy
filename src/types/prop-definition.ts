@@ -5,7 +5,6 @@ import type { SourceSpan } from './source-location.js'
 /** An identifier (or nested object) available for `${...}` interpolation in template strings. */
 export interface InterpolatableIdentifier {
   name: string
-  type?: string
   children?: InterpolatableIdentifier[]
 }
 

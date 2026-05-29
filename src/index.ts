@@ -1,7 +1,8 @@
 // Types
 export type { PropType } from './types/prop-type.js'
 export type { PropDefinition, InterpolatableIdentifier } from './types/prop-definition.js'
-export type { PropValue, ImportSpecifier } from './types/prop-value.js'
+export type { PropValue, ImportSpecifier, CalleeBinding, TemplateValue, TemplateToken } from './types/prop-value.js'
+export { TemplateValueBuilder } from './types/template-value-builder.js'
 export type { ExtractedProps, InsertionPoint } from './types/extracted-props.js'
 export type { DiscriminatedUnionCase, DiscriminatedUnionInfo } from './types/discriminated-union.js'
 export type { SourceSpan } from './types/source-location.js'
@@ -17,6 +18,7 @@ export { findTypeDeclaration, parseValueFromExpression, inferPropTypeFromExpress
 export { collectImports, valueToDisplayString, valueToSourceText } from './editing/value-to-string.js'
 export { ensureImport } from './editing/ensure-import.js'
 export { addProperty, removeProperty, updateProperty } from './editing/apply-value.js'
+export { interpolatablesFromDefinitions, parseInterpolationPath, resolveInterpolatable, interpolationSuggestions, collapseTemplateValue } from './editing/interpolation.js'
 
 // Materialization
 export { materializeValue } from './materialize/materialize-value.js'

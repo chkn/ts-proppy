@@ -16,7 +16,21 @@ export function valueToSourceText(value: PropValue): string {
     }
 
     case 'template': {
-      return '`' + value.value.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`'
+      // Emit a backtick template literal: string segments are literal text
+      // (with `\`, `` ` ``, and `${` escaped so they survive the host
+      // language's template parser), and tokens become `${expr}` interps.
+      let out = ''
+      for (const seg of value.value) {
+        if (typeof seg === 'string') {
+          out += seg
+            .replace(/\\/g, '\\\\')
+            .replace(/`/g, '\\`')
+            .replace(/\$\{/g, '\\${')
+        } else {
+          out += '${' + seg.expr + '}'
+        }
+      }
+      return '`' + out + '`'
     }
 
     case 'functionCall': {
@@ -53,7 +67,7 @@ export function collectImports(value: PropValue): ImportSpecifier[] {
 
   function walk(v: PropValue) {
     if (v.kind === 'functionCall') {
-      if (v.import) imports.push(v.import)
+      if (v.binding?.kind === 'import') imports.push(v.binding.spec)
       v.args.forEach(walk)
     } else if (v.kind === 'object') {
       Object.values(v.properties).forEach(walk)

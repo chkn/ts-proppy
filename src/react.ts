@@ -9,3 +9,5 @@ export type { TemplateEditorProps } from './react/editors/TemplateEditor.js'
 // (which transitively pulls in the typescript compiler via extraction code).
 export { collectImports, valueToDisplayString, valueToSourceText } from './editing/value-to-string.js'
 export { materializeValue } from './materialize/materialize-value.js'
+export { TemplateValueBuilder } from './types/template-value-builder.js'
+export { interpolatablesFromDefinitions, parseInterpolationPath, resolveInterpolatable, interpolationSuggestions, collapseTemplateValue } from './editing/interpolation.js'

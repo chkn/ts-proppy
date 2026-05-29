@@ -60,6 +60,40 @@ describe('materializeValue', () => {
     expect(result(2, 3)).toBe(5)
   })
 
+  test('materializes a token-free template as joined literal text', async () => {
+    const val: PropValue = { kind: 'template', value: ['Hello world'] }
+    const result = await materializeValue(val)
+    expect(result).toBe('Hello world')
+  })
+
+  test('materializes a template with flat interpolation tokens', async () => {
+    const val: PropValue = { kind: 'template', value: ['Hello ', { expr: 'name' }, '!'] }
+    const result = await materializeValue(val, { name: 'Alice' })
+    expect(result).toBe('Hello Alice!')
+  })
+
+  test('throws when a template token is not found in scope', async () => {
+    const val: PropValue = { kind: 'template', value: ['Hello ', { expr: 'name' }, '!'] }
+    await expect(materializeValue(val, {})).rejects.toThrow(/name/)
+  })
+
+  test('resolves a dotted member-access token against nested scope', async () => {
+    const val: PropValue = { kind: 'template', value: ['host=', { expr: 'config.host' }, ''] }
+    const result = await materializeValue(val, { config: { host: 'localhost' } })
+    expect(result).toBe('host=localhost')
+  })
+
+  test('resolves a bracket member-access token against nested scope', async () => {
+    const val: PropValue = { kind: 'template', value: ['', { expr: "config['host']" }, ''] }
+    const result = await materializeValue(val, { config: { host: 'localhost' } })
+    expect(result).toBe('localhost')
+  })
+
+  test('throws when a nested member-access token is missing', async () => {
+    const val: PropValue = { kind: 'template', value: ['', { expr: 'config.port' }, ''] }
+    await expect(materializeValue(val, { config: { host: 'localhost' } })).rejects.toThrow(/config\.port/)
+  })
+
   test('materializes nested structures', async () => {
     const val: PropValue = {
       kind: 'object',

@@ -45,7 +45,7 @@ describe('updateProperty', () => {
       kind: 'functionCall',
       callee: 'openai',
       args: [{ kind: 'primitive', value: 'gpt-4' }],
-      import: { name: 'openai', from: 'ai' },
+      binding: { kind: 'import', spec: { name: 'openai', from: 'ai' } },
     }
 
     const result = updateProperty(source, modelDef, newValue)
