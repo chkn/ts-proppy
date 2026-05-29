@@ -1,6 +1,6 @@
 {
   "name": "ts-proppy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Extract, edit, and materialize TypeScript prop definitions and values",
   "keywords": [
     "typescript",
@@ -33,7 +33,11 @@
       "import": "./dist/react.js"
     }
   },
-  "files": ["dist", "src", "!src/**/__tests__"],
+  "files": [
+    "dist",
+    "src",
+    "!src/**/__tests__"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.react.json",
     "test": "vitest run",
