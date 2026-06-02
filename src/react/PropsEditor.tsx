@@ -106,11 +106,6 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
                 {propDef.description}
               </div>
             )}
-            {propDef.defaultValue && !values?.[propDef.name] && (
-              <div style={{ fontSize: '10px', color: 'var(--proppy-text-muted, #999)', marginBottom: '4px' }}>
-                Default: {valueToSourceText(propDef.defaultValue)}
-              </div>
-            )}
             {renderPropEditor(propDef)}
           </div>
         )
