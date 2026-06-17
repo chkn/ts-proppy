@@ -36,12 +36,10 @@ export function addProperty(
     throw new Error('ExtractedProps is missing insertionPoint')
   }
 
-  const { lastPropertyEnd, objectEnd, indent } = extractedProps.insertionPoint
+  const { lastPropertyEnd, objectEnd, indent, hasProperties } = extractedProps.insertionPoint
   const valueText = valueToSourceText(value)
 
   let result: string
-  const hasProperties = lastPropertyEnd !== objectEnd
-
   if (hasProperties) {
     // Insert after last property; add comma first if the last property has no trailing comma
     const needsComma = sourceCode[lastPropertyEnd - 1] !== ','
@@ -49,7 +47,15 @@ export function addProperty(
     result = sourceCode.slice(0, lastPropertyEnd) + insertText + sourceCode.slice(lastPropertyEnd)
   } else {
     // Empty object
-    const insertText = `\n${indent}${propertyName}: ${valueText},\n`
+    let hasNewline = false
+    let insertText = `\n${indent}${propertyName}: ${valueText},`
+    for (let i = lastPropertyEnd; i < objectEnd; i++) {
+      if (sourceCode[i] === '\n') {
+        hasNewline = true
+        break
+      }
+    }
+    if (!hasNewline) insertText += '\n'
     result = sourceCode.slice(0, lastPropertyEnd) + insertText + sourceCode.slice(lastPropertyEnd)
   }
 

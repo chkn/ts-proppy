@@ -90,6 +90,41 @@ describe('addProperty', () => {
     const result = addProperty(source, extracted, 'greeting', newValue)
     expect(result).toContain('greeting: "hello"')
   })
+
+  test('adds a property to an empty object on a single line, increasing existing indent', () => {
+    const source = `  const x = {}`
+    const defs: PropDefinition[] = []
+    const extracted = setupSource(source, defs)
+    const newValue: PropValue = { kind: 'primitive', value: 'hello' }
+
+    const result = addProperty(source, extracted, 'greeting', newValue)
+    expect(result).toBe(`  const x = {\n    greeting: "hello",\n}`)
+  })
+
+  test.each(['const x = {}', 'const x = {\n}'])('adds a property to: %s', source => {
+    const defs: PropDefinition[] = []
+    const extracted = setupSource(source, defs)
+    const newValue: PropValue = { kind: 'primitive', value: 'hello' }
+
+    const result = addProperty(source, extracted, 'greeting', newValue)
+    expect(result).toBe(`const x = {\n  greeting: "hello",\n}`)
+  })
+
+  test('adds a property with an import to an empty object', () => {
+    const source = `const x = {}`
+    const defs: PropDefinition[] = []
+    const extracted = setupSource(source, defs)
+    const newValue: PropValue = {
+      kind: 'functionCall',
+      callee: 'openai',
+      args: [{ kind: 'primitive', value: 'gpt-4' }],
+      binding: { kind: 'import', spec: { name: 'openai', from: 'ai' } },
+    }
+
+    const result = addProperty(source, extracted, 'model', newValue)
+    expect(result).toContain('model: openai("gpt-4")')
+    expect(result).toContain("import { openai } from 'ai'")
+  })
 })
 
 describe('removeProperty', () => {

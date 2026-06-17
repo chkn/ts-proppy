@@ -90,10 +90,12 @@ function buildInsertionPoint(
   const sourceCode = sourceFile.getFullText()
   const objectEnd = objectLiteral.getEnd() - 1 // position of closing brace
 
+  let lineStart: number
   let lastPropertyEnd: number
-  let indent = '  '
+  let increaseIndent: boolean
+  const hasProperties = objectLiteral.properties.length > 0
 
-  if (objectLiteral.properties.length > 0) {
+  if (hasProperties) {
     const lastProp = objectLiteral.properties[objectLiteral.properties.length - 1]
     lastPropertyEnd = lastProp.getEnd()
     if (sourceCode[lastPropertyEnd] === ',') lastPropertyEnd++
@@ -101,12 +103,27 @@ function buildInsertionPoint(
     // Derive indentation from first property
     const firstProp = objectLiteral.properties[0]
     const propPos = firstProp.getStart(sourceFile)
-    let lineStart = propPos
-    while (lineStart > 0 && sourceCode[lineStart - 1] !== '\n') lineStart--
-    indent = sourceCode.slice(lineStart, propPos)
+    lineStart = propPos
+    increaseIndent = false
   } else {
-    lastPropertyEnd = objectLiteral.getStart(sourceFile) + 1 // after opening brace
+    const bracePos = objectLiteral.getStart(sourceFile)
+    lastPropertyEnd = bracePos + 1 // after opening brace
+
+    // Derive indentation from first opening brace
+    lineStart = bracePos
+    increaseIndent = true
   }
 
-  return { objectEnd, lastPropertyEnd, indent }
+  let nonWhitespaceStart = lineStart
+  while (lineStart > 0 && sourceCode[lineStart - 1] !== '\n') {
+    const i = lineStart - 1
+    const chr = sourceCode[i]
+    if (chr !== '\t' && chr !== ' ') nonWhitespaceStart = i
+    lineStart = i
+  }
+
+  // FIXME: Determine actual indent type from the rest of the file and use that
+  const indent = sourceCode.slice(lineStart, nonWhitespaceStart) + (increaseIndent ? '  ' : '')
+
+  return { objectEnd, lastPropertyEnd, indent, hasProperties }
 }

@@ -17,4 +17,6 @@ export interface InsertionPoint {
   lastPropertyEnd: number
   /** Indentation string to use for new properties */
   indent: string
+  /** Whether the target object literal has any existing properties */
+  hasProperties: boolean
 }
