@@ -44,12 +44,19 @@ function fromHTML(el: HTMLElement): TemplateValue {
     } else if (node instanceof HTMLElement) {
       if (node.classList.contains('te-token')) {
         // Tokens are editable (keeps Firefox caret working), so the span's
-        // text may have drifted from `${expr}` if the user typed inside it.
-        // Re-parse to recover the expr, or dissolve into a string segment.
+        // text may have drifted from `${expr}` if the user typed inside it —
+        // or, when typing at the span's boundary, the browser may fold the new
+        // character into the span (e.g. `${foo}` + `.` → `${foo}.`). Recover
+        // the `${expr}` and split any leading/trailing literal text back out so
+        // the token keeps its highlight, or dissolve into a string segment.
         const text = node.textContent ?? ''
-        const match = text.match(/^\$\{(.+)\}$/)
-        if (match) builder.appendToken(match[1])
-        else builder.appendString(text)
+        const match = text.match(/^(.*)\$\{(.+)\}(.*)$/s)
+        if (match) {
+          const [, before, expr, after] = match
+          if (before) builder.appendString(before)
+          builder.appendToken(expr)
+          if (after) builder.appendString(after)
+        } else builder.appendString(text)
       } else if (node.tagName === 'BR') {
         builder.appendString('\n')
       } else if (node.tagName === 'DIV' || node.tagName === 'P') {
