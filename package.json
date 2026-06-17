@@ -1,6 +1,6 @@
 {
   "name": "ts-proppy",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Extract, edit, and materialize TypeScript prop definitions and values",
   "keywords": [
     "typescript",
