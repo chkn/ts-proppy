@@ -4,6 +4,7 @@ import type { TemplateValue } from '../../types/prop-value.js'
 import type { InterpolatableIdentifier } from '../../types/prop-definition.js'
 import { TemplateValueBuilder } from '../../types/template-value-builder.js'
 import { collapseTemplateValue, interpolationSuggestions } from '../../editing/interpolation.js'
+import { valueToDisplayString } from '../../editing/value-to-string.js'
 
 export interface TemplateEditorProps extends ItemEditorProps {
   className?: string
@@ -89,9 +90,13 @@ function templatesEqual(a: TemplateValue, b: TemplateValue): boolean {
 }
 
 function asTemplateValue(value: ItemEditorProps['value']): TemplateValue {
-  if (value?.kind === 'template') return value.value
-  if (value?.kind === 'primitive' && typeof value.value === 'string') return [value.value]
-  return ['']
+  if (value === undefined) return ['']
+  if (value.kind === 'template') return value.value
+  if (value.kind === 'primitive' && typeof value.value === 'string') return [value.value]
+  // Anything else (a function call, object, array, non-string primitive, …)
+  // isn't a template shape — show it as a single interpolation token instead
+  // of rendering blank.
+  return [{ expr: valueToDisplayString(value) }]
 }
 
 function getTextOffset(root: HTMLElement): number | null {
