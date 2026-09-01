@@ -20,7 +20,11 @@ function escapeHTML(text: string): string {
 }
 
 function renderPlainText(text: string): string {
-  return escapeHTML(text).replace(/\n/g, '<br>')
+  const withCode = escapeHTML(text).replace(
+    /`[^`\n]+`/g,
+    match => `<span class="te-code">${match}</span>`
+  )
+  return withCode.replace(/\n/g, '<br>')
 }
 
 function toHTML(value: TemplateValue): string {
