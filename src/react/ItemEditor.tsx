@@ -3,6 +3,7 @@ import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropValue } from '../types/prop-value.js'
 import type { EditorPlugin } from './types.js'
 import { getDiscriminatedUnionInfo } from '../types/discriminated-union.js'
+import { getSelectableUnionInfo } from '../types/selectable-union.js'
 import { StringEditor } from './editors/StringEditor.js'
 import { NumberEditor } from './editors/NumberEditor.js'
 import { BooleanEditor } from './editors/BooleanEditor.js'
@@ -14,6 +15,7 @@ import { ObjectEditor } from './editors/ObjectEditor.js'
 import { ArrayEditor } from './editors/ArrayEditor.js'
 import { TupleEditor } from './editors/TupleEditor.js'
 import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
+import { UnionMemberEditor } from './editors/UnionMemberEditor.js'
 import { TemplateEditor } from './editors/TemplateEditor.js'
 
 interface ItemEditorInternalProps {
@@ -73,6 +75,21 @@ export function ItemEditor({ value, onChange, propDef, plugins, className }: Ite
   // Constant unions (dropdown)
   if (type.kind === 'union' && type.types.every(t => t.kind === 'constant')) {
     return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} className={className} />
+  }
+
+  // Any other union: a dropdown over its members, plus the selected member's editor
+  const unionInfo = getSelectableUnionInfo(type)
+  if (unionInfo) {
+    return (
+      <UnionMemberEditor
+        propDef={propDef}
+        unionInfo={unionInfo}
+        value={value}
+        onChange={onChange}
+        plugins={plugins}
+        className={className}
+      />
+    )
   }
 
   // Date type

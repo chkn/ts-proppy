@@ -2,6 +2,7 @@ import ts from 'typescript'
 import type { PropType } from '../types/prop-type.js'
 import { findTypeDeclaration } from './helpers.js'
 import { extractDefinitionsFromDeclaration, extractDefinitionsFromTypeNode } from './extract-properties.js'
+import { buildPropTypeFromType } from './build-prop-type-from-type.js'
 
 function isFunctionType(typeNode: ts.TypeNode | undefined): boolean {
   if (!typeNode) return false
@@ -14,6 +15,12 @@ function isFunctionType(typeNode: ts.TypeNode | undefined): boolean {
   }
   return false
 }
+
+/**
+ * Type declarations currently being expanded, used to break cycles in
+ * self-referential types. Safe as module state: extraction is synchronous.
+ */
+const expanding = new Set<ts.Node>()
 
 function extractLiteralValue(typeNode: ts.LiteralTypeNode, sourceFile: ts.SourceFile): unknown {
   const rawValue = typeNode.literal.getText(sourceFile)
@@ -32,10 +39,18 @@ export function buildPropType(
 ): PropType {
   const syntax = typeNode.getText(sourceFile)
 
-  // Literal types (string/number/boolean constants)
+  // Literal types (string/number/boolean constants). `null` is a literal type
+  // node too, and reaches this as `{ value: null }`.
   if (ts.isLiteralTypeNode(typeNode)) {
     const value = extractLiteralValue(typeNode, sourceFile)
     return { kind: 'constant', syntax, value }
+  }
+
+  // `undefined` is a keyword rather than a literal type node, but it names a
+  // single value just as `null` does, so it surfaces as the same kind. That
+  // lets `T | undefined` be recognized as a union around one open-ended member.
+  if (typeNode.kind === ts.SyntaxKind.UndefinedKeyword) {
+    return { kind: 'constant', syntax, value: undefined }
   }
 
   // Tuple types
@@ -56,6 +71,12 @@ export function buildPropType(
     return { kind: 'array', syntax, elementType }
   }
 
+  // `readonly T[]` / `readonly [A, B]` — unwrap and recurse so the readonly
+  // modifier doesn't hide an otherwise-recognized array/tuple shape.
+  if (ts.isTypeOperatorNode(typeNode) && typeNode.operator === ts.SyntaxKind.ReadonlyKeyword) {
+    return { ...buildPropType(typeNode.type, sourceFile, typeChecker), syntax }
+  }
+
   // Function types
   if (isFunctionType(typeNode)) {
     const parameters = extractDefinitionsFromTypeNode(typeNode, sourceFile, typeChecker)
@@ -71,6 +92,13 @@ export function buildPropType(
   // Type references
   if (ts.isTypeReferenceNode(typeNode)) {
     const typeName = typeNode.typeName.getText(sourceFile)
+
+    // `ReadonlyArray<T>` — treat the same as `T[]`.
+    if (typeName === 'ReadonlyArray' && typeNode.typeArguments?.length === 1) {
+      const elementType = buildPropType(typeNode.typeArguments[0], sourceFile, typeChecker)
+      return { kind: 'array', syntax, elementType }
+    }
+
     let typeDecl = findTypeDeclaration(sourceFile, typeName)
     let declSourceFile = sourceFile
 
@@ -87,17 +115,37 @@ export function buildPropType(
       }
     }
 
-    if (typeDecl) {
-      if (ts.isTypeAliasDeclaration(typeDecl) && typeDecl.type) {
-        return buildPropType(typeDecl.type, declSourceFile, typeChecker)
-      }
-      if (ts.isInterfaceDeclaration(typeDecl)) {
-        const properties = extractDefinitionsFromDeclaration(typeDecl, declSourceFile, typeChecker)
-        if (properties.length > 0) {
-          return { kind: 'object', syntax, properties }
+    // A type that refers to itself (`interface Node { children: Node[] }`)
+    // would otherwise expand forever; stop when we re-enter one.
+    if (typeDecl && !expanding.has(typeDecl)) {
+      expanding.add(typeDecl)
+      try {
+        if (ts.isTypeAliasDeclaration(typeDecl) && typeDecl.type) {
+          return buildPropType(typeDecl.type, declSourceFile, typeChecker)
         }
+        if (ts.isInterfaceDeclaration(typeDecl)) {
+          const properties = extractDefinitionsFromDeclaration(typeDecl, declSourceFile, typeChecker)
+          if (properties.length > 0) {
+            return { kind: 'object', syntax, properties }
+          }
+        }
+      } finally {
+        expanding.delete(typeDecl)
       }
     }
+  }
+
+  // Nothing in the syntax tree resolved it. With a checker we can still ask for
+  // the resolved type, which sees through mapped/utility types (`Pick`, `Omit`,
+  // …), generic instantiations, and types declared in other files. The original
+  // source text is kept as `syntax` so the UI still shows what the author wrote.
+  if (typeChecker) {
+    const resolved = buildPropTypeFromType(
+      typeChecker.getTypeAtLocation(typeNode),
+      typeChecker,
+      typeNode
+    )
+    return { ...resolved, syntax }
   }
 
   // Default: primitive

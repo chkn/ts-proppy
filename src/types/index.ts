@@ -3,5 +3,7 @@ export type { PropDefinition, InterpolatableIdentifier } from './prop-definition
 export type { PropValue, ImportSpecifier } from './prop-value.js'
 export type { ExtractedProps, InsertionPoint } from './extracted-props.js'
 export type { DiscriminatedUnionCase, DiscriminatedUnionInfo } from './discriminated-union.js'
+export type { SelectableUnionInfo } from './selectable-union.js'
 export type { SourceSpan } from './source-location.js'
 export { getDiscriminatedUnionInfo } from './discriminated-union.js'
+export { getSelectableUnionInfo, matchUnionMember } from './selectable-union.js'

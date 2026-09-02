@@ -5,8 +5,10 @@ export type { PropValue, ImportSpecifier, CalleeBinding, TemplateValue, Template
 export { TemplateValueBuilder } from './types/template-value-builder.js'
 export type { ExtractedProps, InsertionPoint } from './types/extracted-props.js'
 export type { DiscriminatedUnionCase, DiscriminatedUnionInfo } from './types/discriminated-union.js'
+export type { SelectableUnionInfo } from './types/selectable-union.js'
 export type { SourceSpan } from './types/source-location.js'
 export { getDiscriminatedUnionInfo } from './types/discriminated-union.js'
+export { getSelectableUnionInfo, matchUnionMember } from './types/selectable-union.js'
 
 // Extraction
 export { extractPropertiesFromDeclaration, extractPropertiesFromParameters, extractPropertiesFromTypeNode } from './extraction/extract-properties.js'

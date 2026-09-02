@@ -280,6 +280,34 @@ export default ({ value }: Props) => <div>{value}</div>
     }
   })
 
+  test('surfaces null and undefined members as constants', () => {
+    const result = extractFromSource(`
+export interface Props {
+  description: string | null
+  title: string | undefined
+}
+export default ({ description }: Props) => <div>{description}</div>
+`)
+
+    // A nullable primitive is a union of the primitive and a single-value
+    // constant, so it reaches the dropdown as a member rather than opaquely.
+    for (const def of result.definitions) {
+      expect(def.type.kind).toBe('union')
+      if (def.type.kind !== 'union') continue
+      expect(def.type.types[0]).toEqual({ kind: 'primitive', syntax: 'string' })
+      expect(def.type.types[1].kind).toBe('constant')
+    }
+
+    const nullable = result.definitions[0].type
+    const undefinable = result.definitions[1].type
+    if (nullable.kind === 'union' && nullable.types[1].kind === 'constant') {
+      expect(nullable.types[1].value).toBeNull()
+    }
+    if (undefinable.kind === 'union' && undefinable.types[1].kind === 'constant') {
+      expect(undefinable.types[1].value).toBeUndefined()
+    }
+  })
+
   test('extracts array types with element type', () => {
     const result = extractFromSource(`
 export interface Props {

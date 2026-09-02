@@ -3,11 +3,13 @@ import type { PropType } from '../types/prop-type.js'
 import type { PropValue } from '../types/prop-value.js'
 import type { EditorPlugin } from './types.js'
 import { getDiscriminatedUnionInfo } from '../types/discriminated-union.js'
+import { getSelectableUnionInfo } from '../types/selectable-union.js'
 import { ArrayEditor } from './editors/ArrayEditor.js'
 import { TupleEditor } from './editors/TupleEditor.js'
 import { ObjectEditor } from './editors/ObjectEditor.js'
 import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
 import { ConstantUnionEditor } from './editors/ConstantUnionEditor.js'
+import { UnionMemberEditor } from './editors/UnionMemberEditor.js'
 import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
 
 interface RichEditorProps {
@@ -46,6 +48,20 @@ export function RichEditor({ propType, value, onChange, plugins }: RichEditorPro
   // Constant union
   if (propType.kind === 'union' && propType.types.every(t => t.kind === 'constant')) {
     return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} />
+  }
+
+  // Any other union: a dropdown over its members
+  const unionInfo = getSelectableUnionInfo(propType)
+  if (unionInfo) {
+    return (
+      <UnionMemberEditor
+        propDef={propDef}
+        unionInfo={unionInfo}
+        value={value}
+        onChange={onChange}
+        plugins={plugins}
+      />
+    )
   }
 
   // Object with known properties

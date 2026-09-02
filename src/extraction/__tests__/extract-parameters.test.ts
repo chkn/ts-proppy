@@ -80,4 +80,61 @@ describe('extractDefinitionsFromParameters', () => {
       { name: 'x', type: { kind: 'primitive', syntax: 'any' }, optional: false },
     ])
   })
+
+  test('unwraps readonly arrays into the array kind', () => {
+    const result = extractFromFunction(`function greet(names: readonly string[]) {}`)
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('names')
+    expect(result[0].type.kind).toBe('array')
+    if (result[0].type.kind === 'array') {
+      expect(result[0].type.elementType).toEqual({ kind: 'primitive', syntax: 'string' })
+    }
+  })
+
+  test('unwraps ReadonlyArray<T> into the array kind', () => {
+    const result = extractFromFunction(`function greet(names: ReadonlyArray<string>) {}`)
+    expect(result).toHaveLength(1)
+    expect(result[0].type.kind).toBe('array')
+    if (result[0].type.kind === 'array') {
+      expect(result[0].type.elementType).toEqual({ kind: 'primitive', syntax: 'string' })
+    }
+  })
+
+  test('unwraps a readonly array of an inline object type', () => {
+    const result = extractFromFunction(
+      `function greet(items: readonly { id: number; label: string }[]) {}`
+    )
+    expect(result[0].type.kind).toBe('array')
+    if (result[0].type.kind === 'array') {
+      expect(result[0].type.elementType.kind).toBe('object')
+      if (result[0].type.elementType.kind === 'object') {
+        expect(result[0].type.elementType.properties).toEqual([
+          { name: 'id', type: { kind: 'primitive', syntax: 'number' }, optional: false },
+          { name: 'label', type: { kind: 'primitive', syntax: 'string' }, optional: false },
+        ])
+      }
+    }
+  })
+
+  test('does not recurse forever on a self-referential type', () => {
+    const result = extractFromFunction(
+      `interface Node { label: string; children: Node[] }
+function render(root: Node) {}`
+    )
+    expect(result[0].type.kind).toBe('object')
+    if (result[0].type.kind === 'object') {
+      expect(result[0].type.properties.map(p => p.name)).toEqual(['label', 'children'])
+    }
+  })
+
+  test('unwraps a readonly tuple', () => {
+    const result = extractFromFunction(`function greet(pair: readonly [string, number]) {}`)
+    expect(result[0].type.kind).toBe('tuple')
+    if (result[0].type.kind === 'tuple') {
+      expect(result[0].type.types).toEqual([
+        { kind: 'primitive', syntax: 'string' },
+        { kind: 'primitive', syntax: 'number' },
+      ])
+    }
+  })
 })

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import type { PropsEditorProps } from './types.js'
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropValue } from '../types/prop-value.js'
+import { getSelectableUnionInfo } from '../types/selectable-union.js'
 import { ItemEditor } from './ItemEditor.js'
 import { RichEditor } from './RichEditor.js'
 import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
@@ -11,6 +12,10 @@ function isComplexType(propDef: PropDefinition): boolean {
   const { type } = propDef
   // Constant unions get a dropdown, not complex
   if (type.kind === 'union' && type.types.every(t => t.kind === 'constant')) return false
+  // Likewise any other union: ItemEditor pairs that dropdown with the selected
+  // member's own editor, and unlike RichEditor it gets the real PropDefinition,
+  // so a string member can still offer template interpolation.
+  if (getSelectableUnionInfo(type)) return false
   // Functions get a special editor, not complex
   if (type.kind === 'function') return false
   // Objects, arrays, tuples, and other unions are complex
