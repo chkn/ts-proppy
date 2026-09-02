@@ -94,6 +94,11 @@ describe('materializeValue', () => {
     await expect(materializeValue(val, { config: { host: 'localhost' } })).rejects.toThrow(/config\.port/)
   })
 
+  test('throws an actionable error identifying the unresolvable raw source when materializing a raw value', async () => {
+    const val: PropValue = { kind: 'raw', sourceText: 'doSomething(x)' }
+    await expect(materializeValue(val)).rejects.toThrow(/doSomething\(x\)/)
+  })
+
   test('materializes nested structures', async () => {
     const val: PropValue = {
       kind: 'object',

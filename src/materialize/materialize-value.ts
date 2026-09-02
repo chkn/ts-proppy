@@ -74,7 +74,7 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
     }
 
     case 'raw': {
-      throw new Error('Cannot materialize raw value');
+      throw new Error(`Cannot materialize raw value: ${value.sourceText}`)
     }
   }
 }

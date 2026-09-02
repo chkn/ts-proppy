@@ -17,6 +17,19 @@ import { TupleEditor } from './editors/TupleEditor.js'
 import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
 import { UnionMemberEditor } from './editors/UnionMemberEditor.js'
 import { TemplateEditor } from './editors/TemplateEditor.js'
+import type { PropType } from '../types/prop-type.js'
+
+/**
+ * The JS primitive category a `primitive` {@link PropType} should be edited
+ * as. Prefers the checker-derived `base` (set for branded/template-literal
+ * types whose `syntax` isn't the bare keyword); falls back to `syntax` for
+ * the syntax-tree extraction path, which already normalizes it to the
+ * keyword itself.
+ */
+function primitiveBase(type: PropType): string | undefined {
+  if (type.kind !== 'primitive') return undefined
+  return type.base ?? type.syntax
+}
 
 interface ItemEditorInternalProps {
   propDef: PropDefinition
@@ -40,7 +53,7 @@ export function ItemEditor({ value, onChange, propDef, plugins, className }: Ite
   }
 
   // Template values, or string properties with interpolatables available
-  if (value?.kind === 'template' || (type.syntax === 'string' && propDef.interpolatables?.length)) {
+  if (value?.kind === 'template' || (primitiveBase(type) === 'string' && propDef.interpolatables?.length)) {
     return <TemplateEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
@@ -98,17 +111,17 @@ export function ItemEditor({ value, onChange, propDef, plugins, className }: Ite
   }
 
   // String primitive
-  if (type.syntax === 'string') {
+  if (primitiveBase(type) === 'string') {
     return <StringEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
   // Number primitive
-  if (type.syntax === 'number') {
+  if (primitiveBase(type) === 'number') {
     return <NumberEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
   // Boolean primitive
-  if (type.syntax === 'boolean') {
+  if (primitiveBase(type) === 'boolean') {
     return <BooleanEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 

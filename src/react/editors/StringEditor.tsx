@@ -6,12 +6,12 @@ export function StringEditor({ value, onChange, propDef, className }: ItemEditor
   const strValue = value?.kind === 'primitive' && typeof value.value === 'string' ? value.value : ''
 
   return (
-    <input
-      type="text"
+    <textarea
       value={strValue}
       onChange={(e) => onChange({ kind: 'primitive', value: e.target.value })}
       placeholder={defaultPlaceholder(propDef)}
       className={className}
+      rows={1}
       style={className ? undefined : {
         width: '100%',
         padding: '4px 6px',
@@ -20,6 +20,8 @@ export function StringEditor({ value, onChange, propDef, className }: ItemEditor
         border: '1px solid var(--proppy-border, #ddd)',
         borderRadius: '3px',
         fontSize: '12px',
+        fontFamily: 'inherit',
+        resize: 'vertical',
       }}
     />
   )

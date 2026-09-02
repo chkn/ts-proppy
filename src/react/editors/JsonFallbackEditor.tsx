@@ -12,6 +12,7 @@ export function JsonFallbackEditor({ value, onChange, propDef, className }: Item
       onChange={(e) => onChange({ kind: 'raw', sourceText: e.target.value })}
       placeholder={defaultPlaceholder(propDef)}
       className={className}
+      data-proppy-editor="json-fallback"
       style={className ? undefined : {
         width: '100%',
         padding: '4px 6px',

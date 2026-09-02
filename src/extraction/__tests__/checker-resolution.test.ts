@@ -69,7 +69,7 @@ export function orchestrate(threadMsgs: readonly Pick<ThreadMessage, 'excerpt'>[
     expect(type.elementType.properties).toEqual([
       {
         name: 'excerpt',
-        type: { kind: 'primitive', syntax: 'string' },
+        type: { kind: 'primitive', syntax: 'string', base: 'string' },
         optional: false,
         description: 'Portion of the message relevant to this thread.',
       },
@@ -89,8 +89,8 @@ export function greet(user: User) {}`,
     expect(defs[0].type.kind).toBe('object')
     if (defs[0].type.kind !== 'object') return
     expect(defs[0].type.properties).toEqual([
-      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
-      { name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: true },
+      { name: 'name', type: { kind: 'primitive', syntax: 'string', base: 'string' }, optional: false },
+      { name: 'age', type: { kind: 'primitive', syntax: 'number', base: 'number' }, optional: true },
     ])
   })
 
@@ -115,7 +115,7 @@ export function plan(task: Pick<Task, 'description'>) {}`,
     // The checker decides the order of union members, so match on content.
     expect(description.types).toEqual(
       expect.arrayContaining([
-        { kind: 'primitive', syntax: 'string' },
+        { kind: 'primitive', syntax: 'string', base: 'string' },
         { kind: 'constant', syntax: 'null', value: null },
       ])
     )
@@ -150,7 +150,7 @@ export function greet(a: Omit<User, 'secret'>, b: Partial<User>) {}`,
     expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'Date' })
   })
 
-  test('keeps a template-literal string type opaque', () => {
+  test('keeps a template-literal string type opaque, tagged with its string base for editor routing', () => {
     const defs = extractParams(
       {
         '/proj/ids.ts': 'export type TaskId = `tsk_${string}`',
@@ -159,10 +159,10 @@ export function run(taskId: TaskId) {}`,
       },
       '/proj/prompt.ts'
     )
-    expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'TaskId' })
+    expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'TaskId', base: 'string' })
   })
 
-  test('keeps a branded primitive opaque', () => {
+  test('keeps a branded primitive opaque, tagged with its string base for editor routing', () => {
     const defs = extractParams(
       {
         '/proj/ids.ts': `export type UserId = string & { readonly __brand: 'UserId' }`,
@@ -171,7 +171,7 @@ export function run(id: UserId) {}`,
       },
       '/proj/prompt.ts'
     )
-    expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'UserId' })
+    expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'UserId', base: 'string' })
   })
 
   test('stops recursing on self-referential types', () => {

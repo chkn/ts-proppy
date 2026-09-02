@@ -1,5 +1,5 @@
 // Types
-export type { PropType } from './types/prop-type.js'
+export type { PropType, PrimitiveBase } from './types/prop-type.js'
 export type { PropDefinition, InterpolatableIdentifier } from './types/prop-definition.js'
 export type { PropValue, ImportSpecifier, CalleeBinding, TemplateValue, TemplateToken } from './types/prop-value.js'
 export { TemplateValueBuilder } from './types/template-value-builder.js'

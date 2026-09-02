@@ -1,6 +1,6 @@
 import ts from 'typescript'
 import type { PropDefinition } from '../types/prop-definition.js'
-import type { PropType } from '../types/prop-type.js'
+import type { PrimitiveBase, PropType } from '../types/prop-type.js'
 
 /**
  * Depth limit for recursing into resolved types. Guards against self-referential
@@ -27,6 +27,21 @@ const PRIMITIVE_FLAGS =
   ts.TypeFlags.Never |
   ts.TypeFlags.Any |
   ts.TypeFlags.Unknown
+
+/**
+ * The {@link PrimitiveBase} a type's flags boil down to, if any. Used to route
+ * a `primitive` {@link PropType} to the right editor even when its `syntax`
+ * isn't the bare keyword — a branded or template-literal type (e.g.
+ * `` `tsk_${string}` ``) is still `StringLike` under the hood.
+ */
+function primitiveBase(flags: ts.TypeFlags): PrimitiveBase | undefined {
+  if (flags & ts.TypeFlags.StringLike) return 'string'
+  if (flags & ts.TypeFlags.NumberLike) return 'number'
+  if (flags & ts.TypeFlags.BooleanLike) return 'boolean'
+  if (flags & ts.TypeFlags.BigIntLike) return 'bigint'
+  if (flags & ts.TypeFlags.ESSymbolLike) return 'symbol'
+  return undefined
+}
 
 /**
  * Whether `symbol` is behaviour (a method, or a property holding a function)
@@ -102,7 +117,7 @@ export function buildPropTypeFromType(
 
   // Primitives. Checked before unions: `boolean` is itself a `true | false` union.
   if (type.flags & PRIMITIVE_FLAGS) {
-    return { kind: 'primitive', syntax }
+    return { kind: 'primitive', syntax, base: primitiveBase(type.flags) }
   }
 
   // Arrays and tuples
@@ -122,8 +137,11 @@ export function buildPropTypeFromType(
 
   // A branded primitive (`string & { __brand: 'TaskId' }`) is edited as the
   // primitive it wraps, not as an object with a brand field.
-  if (type.isIntersection() && type.types.some(t => t.flags & PRIMITIVE_FLAGS)) {
-    return { kind: 'primitive', syntax }
+  if (type.isIntersection()) {
+    const primitiveMember = type.types.find(t => t.flags & PRIMITIVE_FLAGS)
+    if (primitiveMember) {
+      return { kind: 'primitive', syntax, base: primitiveBase(primitiveMember.flags) }
+    }
   }
 
   // Unions
