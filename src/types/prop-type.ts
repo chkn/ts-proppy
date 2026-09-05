@@ -17,3 +17,15 @@ export type PropType =
   | { kind: 'constant'; syntax: string; value: any }
   | { kind: 'array'; syntax: string; elementType: PropType }
   | { kind: 'tuple'; syntax: string; types: PropType[] }
+  /**
+   * A type no form can construct a value of — a class instance (a db handle, a
+   * socket), an all-method service interface, or a shape so large that
+   * expanding it is the wrong trade. It carries only its `syntax`, because
+   * there is nothing beneath it an editor could usefully show.
+   *
+   * Opacity is a property of the type alone. It says "this slot has no
+   * editor", not "nothing can fill this slot" — a host is expected to offer
+   * some other source (a picker over values it can produce at run time) in
+   * place of the missing editor.
+   */
+  | { kind: 'opaque'; syntax: string }

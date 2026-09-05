@@ -1,7 +1,7 @@
 import React from 'react'
 import type { PropType } from '../types/prop-type.js'
 import type { PropValue } from '../types/prop-value.js'
-import type { EditorPlugin } from './types.js'
+import type { EditorPlugin, SlotPath } from './types.js'
 import { getDiscriminatedUnionInfo } from '../types/discriminated-union.js'
 import { getSelectableUnionInfo } from '../types/selectable-union.js'
 import { ArrayEditor } from './editors/ArrayEditor.js'
@@ -17,19 +17,20 @@ interface RichEditorProps {
   value: PropValue | undefined
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
+  path?: SlotPath
 }
 
-export function RichEditor({ propType, value, onChange, plugins }: RichEditorProps) {
+export function RichEditor({ propType, value, onChange, plugins, path = [] }: RichEditorProps) {
   const propDef = { name: '', type: propType, optional: false }
 
   // Array type
   if (propType.kind === 'array') {
-    return <ArrayEditor elementType={propType.elementType} value={value} onChange={onChange} plugins={plugins} />
+    return <ArrayEditor elementType={propType.elementType} value={value} onChange={onChange} plugins={plugins} path={path} />
   }
 
   // Tuple type
   if (propType.kind === 'tuple') {
-    return <TupleEditor types={propType.types} value={value} onChange={onChange} plugins={plugins} />
+    return <TupleEditor types={propType.types} value={value} onChange={onChange} plugins={plugins} path={path} />
   }
 
   // Discriminated union
@@ -41,6 +42,7 @@ export function RichEditor({ propType, value, onChange, plugins }: RichEditorPro
         value={value}
         onChange={onChange}
         plugins={plugins}
+        path={path}
       />
     )
   }
@@ -60,13 +62,14 @@ export function RichEditor({ propType, value, onChange, plugins }: RichEditorPro
         value={value}
         onChange={onChange}
         plugins={plugins}
+        path={path}
       />
     )
   }
 
   // Object with known properties
   if (propType.kind === 'object' && propType.properties.length > 0) {
-    return <ObjectEditor properties={propType.properties} value={value} onChange={onChange} plugins={plugins} />
+    return <ObjectEditor properties={propType.properties} value={value} onChange={onChange} plugins={plugins} path={path} />
   }
 
   // Fallback

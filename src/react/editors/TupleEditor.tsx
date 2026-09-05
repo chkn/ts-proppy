@@ -1,17 +1,19 @@
-import React from 'react'
 import type { PropValue } from '../../types/prop-value.js'
 import type { PropType } from '../../types/prop-type.js'
-import type { EditorPlugin } from '../types.js'
+import type { EditorPlugin, SlotPath } from '../types.js'
 import { ItemEditor } from '../ItemEditor.js'
+import { PropRow } from '../PropRow.js'
+import { nestedGroupStyle } from '../theme.js'
 
 interface TupleEditorProps {
   types: PropType[]
   value: PropValue | undefined
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
+  path?: SlotPath
 }
 
-export function TupleEditor({ types, value, onChange, plugins }: TupleEditorProps) {
+export function TupleEditor({ types, value, onChange, plugins, path = [] }: TupleEditorProps) {
   const elements: PropValue[] = value?.kind === 'tuple' ? value.elements : []
 
   const updateItem = (index: number, newValue: PropValue) => {
@@ -21,29 +23,19 @@ export function TupleEditor({ types, value, onChange, plugins }: TupleEditorProp
   }
 
   return (
-    <div style={{
-      border: '1px solid var(--proppy-border, #ddd)',
-      borderRadius: '4px',
-      padding: '8px',
-      background: 'var(--proppy-container-bg, #fafafa)',
-    }}>
-      <div style={{ marginBottom: '8px', fontSize: '11px', color: 'var(--proppy-text-secondary, #666)' }}>
-        Tuple [{types.map(t => t.syntax).join(', ')}]
-      </div>
+    <div style={nestedGroupStyle}>
       {types.map((elementType, index) => {
         const elementPropDef = { name: `[${index}]`, type: elementType, optional: false }
         return (
-          <div key={index} style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500, color: 'var(--proppy-text-primary, inherit)' }}>
-              [{index}] {elementType.syntax}
-            </label>
+          <PropRow key={index} name={`[${index}]`} type={elementType} optional={false}>
             <ItemEditor
               propDef={elementPropDef}
               value={elements[index]}
-              onChange={(newValue) => updateItem(index, newValue)}
+              onChange={newValue => updateItem(index, newValue)}
               plugins={plugins}
+              path={[...path, String(index)]}
             />
-          </div>
+          </PropRow>
         )
       })}
     </div>

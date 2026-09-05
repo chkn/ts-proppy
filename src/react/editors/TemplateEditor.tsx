@@ -5,6 +5,7 @@ import type { InterpolatableIdentifier } from '../../types/prop-definition.js'
 import { TemplateValueBuilder } from '../../types/template-value-builder.js'
 import { collapseTemplateValue, interpolationSuggestions } from '../../editing/interpolation.js'
 import { valueToDisplayString } from '../../editing/value-to-string.js'
+import { colors, controlStyle, radius } from '../theme.js'
 
 export interface TemplateEditorProps extends ItemEditorProps {
   className?: string
@@ -507,14 +508,8 @@ export function TemplateEditor({ value, onChange, propDef, className, placeholde
         onMouseUp={updateSuggestions}
         onBlur={handleBlur}
         style={className ? undefined : {
-          width: '100%',
-          padding: '4px 6px',
-          background: 'var(--proppy-input-bg, #fff)',
-          color: 'var(--proppy-input-color, inherit)',
-          border: '1px solid var(--proppy-border, #ddd)',
-          borderRadius: '3px',
-          fontSize: '12px',
-          minHeight: '24px',
+          ...controlStyle,
+          minHeight: 24,
           outline: 'none',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
@@ -534,10 +529,10 @@ export function TemplateEditor({ value, onChange, propDef, className, placeholde
             minWidth: 160,
             maxHeight: 240,
             overflowY: 'auto',
-            background: 'var(--proppy-menu-bg, #fff)',
-            color: 'var(--proppy-menu-color, inherit)',
-            border: '1px solid var(--proppy-border, #ddd)',
-            borderRadius: 6,
+            background: colors.menuBg,
+            color: colors.menuColor,
+            border: `1px solid ${colors.border}`,
+            borderRadius: radius.md,
             boxShadow: '0 4px 16px rgba(0,0,0,0.16)',
             fontSize: 13,
           }}
@@ -564,8 +559,8 @@ export function TemplateEditor({ value, onChange, propDef, className, placeholde
                   cursor: 'pointer',
                   fontStyle: action ? 'italic' : 'normal',
                   borderTop: action && i > 0 && suggest.items[i - 1].kind === 'identifier'
-                    ? '1px solid var(--proppy-border, #eee)' : undefined,
-                  background: i === suggest.index ? 'var(--proppy-menu-active-bg, #eef)' : 'transparent',
+                    ? `1px solid ${colors.border}` : undefined,
+                  background: i === suggest.index ? colors.menuActiveBg : 'transparent',
                 }}
               >
                 {label}

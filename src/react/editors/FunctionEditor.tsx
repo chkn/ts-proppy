@@ -1,6 +1,7 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
+import { colors, controlStyle, radius } from '../theme.js'
 
 export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
   const parameters = propDef.type.kind === 'function' ? propDef.type.parameters : []
@@ -14,14 +15,14 @@ export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
   return (
     <div>
       <div style={{
-        fontSize: '11px',
-        fontFamily: 'monospace',
-        color: 'var(--proppy-text-secondary, #666)',
-        marginBottom: '4px',
+        fontSize: 11,
+        fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+        color: colors.textSecondary,
+        marginBottom: 4,
         padding: '4px 8px',
-        background: 'var(--proppy-button-bg, #f5f5f5)',
-        borderRadius: '3px',
-        border: '1px solid var(--proppy-border, #e0e0e0)',
+        background: colors.buttonBg,
+        borderRadius: radius.sm,
+        border: `1px solid ${colors.border}`,
       }}>
         ({paramSignature}) =&gt;
       </div>
@@ -34,16 +35,11 @@ export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
         })}
         placeholder={placeholder}
         style={{
-          width: '100%',
+          ...controlStyle,
           padding: '6px 8px',
-          background: 'var(--proppy-input-bg, #fff)',
-          color: 'var(--proppy-input-color, inherit)',
-          border: '1px solid var(--proppy-border, #ddd)',
-          borderRadius: '4px',
-          fontSize: '12px',
-          fontFamily: 'monospace',
-          boxSizing: 'border-box',
-          minHeight: '60px',
+          borderRadius: radius.md,
+          fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+          minHeight: 60,
           resize: 'vertical',
         }}
       />

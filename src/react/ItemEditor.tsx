@@ -1,7 +1,7 @@
 import React from 'react'
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropValue } from '../types/prop-value.js'
-import type { EditorPlugin } from './types.js'
+import type { EditorPlugin, SlotPath } from './types.js'
 import { getDiscriminatedUnionInfo } from '../types/discriminated-union.js'
 import { getSelectableUnionInfo } from '../types/selectable-union.js'
 import { StringEditor } from './editors/StringEditor.js'
@@ -17,6 +17,7 @@ import { TupleEditor } from './editors/TupleEditor.js'
 import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
 import { UnionMemberEditor } from './editors/UnionMemberEditor.js'
 import { TemplateEditor } from './editors/TemplateEditor.js'
+import { OpaqueEditor } from './editors/OpaqueEditor.js'
 import type { PropType } from '../types/prop-type.js'
 
 /**
@@ -37,17 +38,21 @@ interface ItemEditorInternalProps {
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
   className?: string
+  /** This slot's position in the value being edited. See {@link SlotPath}. */
+  path?: SlotPath
 }
 
-export function ItemEditor({ value, onChange, propDef, plugins, className }: ItemEditorInternalProps) {
+const ROOT_PATH: SlotPath = []
+
+export function ItemEditor({ value, onChange, propDef, plugins, className, path = ROOT_PATH }: ItemEditorInternalProps) {
   const { type } = propDef
 
   // Check plugins first
   if (plugins) {
     for (const plugin of plugins) {
-      if (plugin.match(type)) {
+      if (plugin.match(type, path)) {
         const PluginComponent = plugin.component
-        return <PluginComponent propDef={propDef} value={value} onChange={onChange} />
+        return <PluginComponent propDef={propDef} value={value} onChange={onChange} path={path} />
       }
     }
   }
@@ -64,12 +69,12 @@ export function ItemEditor({ value, onChange, propDef, plugins, className }: Ite
 
   // Array types
   if (type.kind === 'array') {
-    return <ArrayEditor elementType={type.elementType} value={value} onChange={onChange} plugins={plugins} />
+    return <ArrayEditor elementType={type.elementType} value={value} onChange={onChange} plugins={plugins} path={path} />
   }
 
   // Tuple types
   if (type.kind === 'tuple') {
-    return <TupleEditor types={type.types} value={value} onChange={onChange} plugins={plugins} />
+    return <TupleEditor types={type.types} value={value} onChange={onChange} plugins={plugins} path={path} />
   }
 
   // Discriminated unions
@@ -81,6 +86,7 @@ export function ItemEditor({ value, onChange, propDef, plugins, className }: Ite
         value={value}
         onChange={onChange}
         plugins={plugins}
+        path={path}
       />
     )
   }
@@ -101,6 +107,7 @@ export function ItemEditor({ value, onChange, propDef, plugins, className }: Ite
         onChange={onChange}
         plugins={plugins}
         className={className}
+        path={path}
       />
     )
   }
@@ -125,9 +132,15 @@ export function ItemEditor({ value, onChange, propDef, plugins, className }: Ite
     return <BooleanEditor propDef={propDef} value={value} onChange={onChange} className={className} />
   }
 
+  // Types no form can build a value of. Routed before the JSON fallback: a raw
+  // textarea over a database handle only invites input that can never be right.
+  if (type.kind === 'opaque') {
+    return <OpaqueEditor propDef={propDef} value={value} onChange={onChange} className={className} path={path} />
+  }
+
   // Object types with known properties
   if (type.kind === 'object' && type.properties.length > 0) {
-    return <ObjectEditor properties={type.properties} value={value} onChange={onChange} plugins={plugins} />
+    return <ObjectEditor properties={type.properties} value={value} onChange={onChange} plugins={plugins} path={path} />
   }
 
   // Fallback

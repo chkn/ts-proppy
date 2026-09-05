@@ -9,6 +9,21 @@ import type { PrimitiveBase, PropType } from '../types/prop-type.js'
 const MAX_DEPTH = 6
 
 /**
+ * Circuit breaker on how many properties one top-level type may expand into.
+ *
+ * {@link MAX_DEPTH} bounds depth but not breadth: a handle type like a database
+ * client has a couple of dozen top-level members and the checker walks every
+ * overload beneath each of them, which is how a single parameter turns into
+ * megabytes of JSON.
+ *
+ * This is deliberately *not* a semantic rule — collapsing a merely large type
+ * into an opaque one is wrong when the type is genuinely editable, so the
+ * ceiling is set high and firing is logged loudly. Treat a hit as a missing
+ * rule in {@link isUnconstructible}, not as designed behaviour.
+ */
+const MAX_PROPERTIES = 5000
+
+/**
  * Type flags that should always surface as an opaque `primitive`.
  *
  * The `*Like` flags matter: they also cover the shapes that merely stand in for
@@ -27,6 +42,14 @@ const PRIMITIVE_FLAGS =
   ts.TypeFlags.Never |
   ts.TypeFlags.Any |
   ts.TypeFlags.Unknown
+
+/** Mutable state shared by one top-level {@link buildPropTypeFromType} call. */
+interface BuildContext {
+  /** Properties expanded so far, against {@link MAX_PROPERTIES}. */
+  propertyCount: number
+  /** Whether the circuit breaker has already been reported for this call. */
+  reported: boolean
+}
 
 /**
  * The {@link PrimitiveBase} a type's flags boil down to, if any. Used to route
@@ -55,11 +78,106 @@ function isBehaviour(symbol: ts.Symbol, typeChecker: ts.TypeChecker, location: t
   return typeChecker.getTypeOfSymbolAtLocation(symbol, location).getCallSignatures().length > 0
 }
 
+/** Whether any of `symbol`'s declarations is `private` or `protected`. */
+function hasInaccessibleDeclaration(symbol: ts.Symbol): boolean {
+  const nonPublic = ts.ModifierFlags.Private | ts.ModifierFlags.Protected
+  return !!symbol.declarations?.some(d => ts.getCombinedModifierFlags(d as ts.Declaration) & nonPublic)
+}
+
+/**
+ * Whether `type` is a class *instance* type — declared with `class`, or
+ * carrying members no outside code could supply.
+ *
+ * This is the motivating opacity rule: a `DrizzleD1Database` is
+ * `declare class … extends BaseSQLiteDatabase`, and no form builds one.
+ */
+function isClassInstanceType(type: ts.Type): boolean {
+  const symbol = type.getSymbol()
+  if (symbol) {
+    if (symbol.flags & ts.SymbolFlags.Class) return true
+    if (symbol.declarations?.some(d => ts.isClassDeclaration(d) || ts.isClassExpression(d))) {
+      return true
+    }
+  }
+  // A type can be instance-shaped without a class declaration in view — an
+  // anonymous or mapped view over one still carries its inaccessible members.
+  return type.getProperties().some(hasInaccessibleDeclaration)
+}
+
+/**
+ * The two structural opacity rules, applied to a type already known not to be
+ * a primitive, array, union, or function:
+ *
+ * 1. **Class instance types**, looking through intersections — an intersection
+ *    is unconstructible if *any* constituent is, since building the whole
+ *    means building that part too.
+ * 2. **All-method object types** — an interface whose members are all methods
+ *    or function-typed properties and which holds no data at all. An RPC client
+ *    handle or a service interface: not a class, equally unconstructible.
+ */
+function isUnconstructible(
+  type: ts.Type,
+  typeChecker: ts.TypeChecker,
+  location: ts.Node,
+  properties: readonly ts.Symbol[] = typeChecker.getPropertiesOfType(type)
+): boolean {
+  if (type.isIntersection()) {
+    return type.types.some(t => isUnconstructible(t, typeChecker, location))
+  }
+  // Guard the recursion into intersection members: `string` reports every
+  // member of the `String` interface, all of them methods, so without this the
+  // all-method rule would swallow every branded primitive.
+  if (type.flags & PRIMITIVE_FLAGS) return false
+  if (isClassInstanceType(type)) return true
+
+  return (
+    properties.length > 0 && properties.every(p => isBehaviour(p, typeChecker, location))
+  )
+}
+
+/**
+ * Whether no value of `type` could be constructed from a `PropValue` — that is,
+ * from data typed into a form — and so the type should surface as
+ * `{ kind: 'opaque' }` rather than being expanded into an editor.
+ *
+ * Opacity is a property of the type alone. It is never decided by what a host
+ * happens to have available to fill the slot: a slot that *is* editable keeps
+ * its editor even when the host could also supply it some other way.
+ *
+ * The rules are narrow by design, so a genuinely unconstructible type that is
+ * neither class-shaped nor all-method still expands. Prefer adding a rule here
+ * over lowering {@link MAX_PROPERTIES}.
+ *
+ * @param type - The resolved type to classify.
+ * @param typeChecker - Checker that produced `type`.
+ * @param location - A node in the program, used to resolve member types.
+ * @param properties - `type`'s own properties, if the caller already has them
+ *   (e.g. to decide whether to expand into an object). Defaults to resolving
+ *   them here so the check still works standalone.
+ */
+export function isOpaqueType(
+  type: ts.Type,
+  typeChecker: ts.TypeChecker,
+  location: ts.Node,
+  properties: readonly ts.Symbol[] = typeChecker.getPropertiesOfType(type)
+): boolean {
+  // Everything with an editor of its own is constructible by definition.
+  if (type.flags & PRIMITIVE_FLAGS) return false
+  if (typeChecker.isArrayType(type) || typeChecker.isTupleType(type)) return false
+  if (type.isUnion()) return false
+  // A branded primitive (`string & { __brand }`) is edited as its primitive.
+  if (type.isIntersection() && type.types.some(t => t.flags & PRIMITIVE_FLAGS)) return false
+  if (type.getCallSignatures().length > 0) return false
+
+  return isUnconstructible(type, typeChecker, location, properties)
+}
+
 function symbolToPropDefinition(
   symbol: ts.Symbol,
   typeChecker: ts.TypeChecker,
   location: ts.Node,
-  depth: number
+  depth: number,
+  ctx: BuildContext
 ): PropDefinition {
   const optional = !!(symbol.flags & ts.SymbolFlags.Optional)
   let type = typeChecker.getTypeOfSymbolAtLocation(symbol, location)
@@ -69,7 +187,7 @@ function symbolToPropDefinition(
 
   const def: PropDefinition = {
     name: symbol.getName(),
-    type: buildPropTypeFromType(type, typeChecker, location, depth + 1),
+    type: build(type, typeChecker, location, depth + 1, ctx),
     optional,
   }
 
@@ -87,6 +205,10 @@ function symbolToPropDefinition(
  * direct declaration to walk: mapped and utility types (`Pick`, `Omit`,
  * `Partial`, …), generic instantiations, and types imported from other files.
  *
+ * Types that no form could build a value of surface as
+ * `{ kind: 'opaque' }` rather than being expanded — see
+ * {@link isUnconstructible}.
+ *
  * @param type - The resolved type.
  * @param typeChecker - Checker that produced `type`.
  * @param location - A node in the program, used to resolve property types.
@@ -97,6 +219,16 @@ export function buildPropTypeFromType(
   typeChecker: ts.TypeChecker,
   location: ts.Node,
   depth = 0
+): PropType {
+  return build(type, typeChecker, location, depth, { propertyCount: 0, reported: false })
+}
+
+function build(
+  type: ts.Type,
+  typeChecker: ts.TypeChecker,
+  location: ts.Node,
+  depth: number,
+  ctx: BuildContext
 ): PropType {
   const syntax = typeChecker.typeToString(type)
 
@@ -124,19 +256,20 @@ export function buildPropTypeFromType(
   if (typeChecker.isArrayType(type)) {
     const [element] = typeChecker.getTypeArguments(type as ts.TypeReference)
     const elementType: PropType = element
-      ? buildPropTypeFromType(element, typeChecker, location, depth + 1)
+      ? build(element, typeChecker, location, depth + 1, ctx)
       : { kind: 'primitive', syntax: 'any' }
     return { kind: 'array', syntax, elementType }
   }
   if (typeChecker.isTupleType(type)) {
     const types = typeChecker
       .getTypeArguments(type as ts.TypeReference)
-      .map(t => buildPropTypeFromType(t, typeChecker, location, depth + 1))
+      .map(t => build(t, typeChecker, location, depth + 1, ctx))
     return { kind: 'tuple', syntax, types }
   }
 
   // A branded primitive (`string & { __brand: 'TaskId' }`) is edited as the
-  // primitive it wraps, not as an object with a brand field.
+  // primitive it wraps, not as an object with a brand field. Checked before
+  // opacity: the brand carries no members to make the whole unconstructible.
   if (type.isIntersection()) {
     const primitiveMember = type.types.find(t => t.flags & PRIMITIVE_FLAGS)
     if (primitiveMember) {
@@ -146,7 +279,7 @@ export function buildPropTypeFromType(
 
   // Unions
   if (type.isUnion()) {
-    const types = type.types.map(t => buildPropTypeFromType(t, typeChecker, location, depth + 1))
+    const types = type.types.map(t => build(t, typeChecker, location, depth + 1, ctx))
     return { kind: 'union', syntax, types }
   }
 
@@ -155,19 +288,46 @@ export function buildPropTypeFromType(
   if (callSignatures.length > 0) {
     const parameters = callSignatures[0]
       .getParameters()
-      .map(p => symbolToPropDefinition(p, typeChecker, location, depth))
+      .map(p => symbolToPropDefinition(p, typeChecker, location, depth, ctx))
     return { kind: 'function', syntax, parameters }
   }
 
-  // Objects. Only worth expanding if the type carries data: one whose members
-  // are all behaviour (`Date`, `RegExp`, …) stays opaque so the UI can treat it
-  // as a single value rather than a form over its prototype.
+  // Objects. Resolved once: used both to decide opacity (an all-method
+  // interface) and, if not opaque, to expand into an object below.
   const properties = typeChecker.getPropertiesOfType(type)
-  if (properties.some(p => !isBehaviour(p, typeChecker, location))) {
+
+  // The property-count budget is a cheap length check, so it runs before the
+  // opacity scan below: no point walking every property's call signatures to
+  // classify a type that's going to collapse to opaque either way.
+  if (properties.length > 0) {
+    ctx.propertyCount += properties.length
+    if (ctx.propertyCount > MAX_PROPERTIES) {
+      if (!ctx.reported) {
+        ctx.reported = true
+        console.warn(
+          `[ts-proppy] '${syntax}' exceeded the ${MAX_PROPERTIES}-property expansion budget ` +
+            `and was collapsed to an opaque type. This is a circuit breaker, not a rule: ` +
+            `if the type is genuinely editable, it needs a narrower opacity rule (or lazy ` +
+            `subtree expansion), not a lower budget.`
+        )
+      }
+      return { kind: 'opaque', syntax }
+    }
+  }
+
+  // Types no form can build a value of stop here rather than expanding into a
+  // form over their prototype.
+  if (isOpaqueType(type, typeChecker, location, properties)) {
+    return { kind: 'opaque', syntax }
+  }
+
+  if (properties.length > 0) {
     return {
       kind: 'object',
       syntax,
-      properties: properties.map(p => symbolToPropDefinition(p, typeChecker, location, depth)),
+      properties: properties.map(p =>
+        symbolToPropDefinition(p, typeChecker, location, depth, ctx)
+      ),
     }
   }
 

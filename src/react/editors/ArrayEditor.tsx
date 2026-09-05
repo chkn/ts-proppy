@@ -1,65 +1,92 @@
-import React from 'react'
-import type { PropValue } from '../../types/prop-value.js'
-import type { PropType } from '../../types/prop-type.js'
-import type { EditorPlugin } from '../types.js'
-import { ItemEditor } from '../ItemEditor.js'
+import type { PropType } from "../../types/prop-type.js";
+import type { PropValue } from "../../types/prop-value.js";
+import { isComplexPropType } from "../complex-type.js";
+import { ItemEditor } from "../ItemEditor.js";
+import {
+  buttonStyle,
+  colors,
+  nestedGroupStyle,
+  radius,
+  rowHeaderHeight,
+} from "../theme.js";
+import type { EditorPlugin, SlotPath } from "../types.js";
 
 interface ArrayEditorProps {
-  elementType: PropType
-  value: PropValue | undefined
-  onChange: (value: PropValue) => void
-  plugins?: EditorPlugin[]
+  elementType: PropType;
+  value: PropValue | undefined;
+  onChange: (value: PropValue) => void;
+  plugins?: EditorPlugin[];
+  path?: SlotPath;
 }
 
-export function ArrayEditor({ elementType, value, onChange, plugins }: ArrayEditorProps) {
-  const elements: PropValue[] = value?.kind === 'array' ? value.elements : []
+export function ArrayEditor({
+  elementType,
+  value,
+  onChange,
+  plugins,
+  path = [],
+}: ArrayEditorProps) {
+  const elements: PropValue[] = value?.kind === "array" ? value.elements : [];
 
   const addItem = () => {
-    onChange({ kind: 'array', elements: [...elements, { kind: 'primitive', value: '' }] })
-  }
+    onChange({
+      kind: "array",
+      elements: [...elements, { kind: "primitive", value: "" }],
+    });
+  };
 
   const removeItem = (index: number) => {
-    onChange({ kind: 'array', elements: elements.filter((_, i) => i !== index) })
-  }
+    onChange({
+      kind: "array",
+      elements: elements.filter((_, i) => i !== index),
+    });
+  };
 
   const updateItem = (index: number, newValue: PropValue) => {
-    const newElements = [...elements]
-    newElements[index] = newValue
-    onChange({ kind: 'array', elements: newElements })
-  }
+    const newElements = [...elements];
+    newElements[index] = newValue;
+    onChange({ kind: "array", elements: newElements });
+  };
 
-  const elementPropDef = { name: '', type: elementType, optional: false }
+  const elementPropDef = { name: "", type: elementType, optional: false };
+
+  // A complex element (object, tuple, ...) renders its own PropRow header
+  // above its actual controls, so the row's flex-start top lands on that
+  // label rather than on anything editable. Nudge the button down past it.
+  const removeButtonOffset = isComplexPropType(elementType)
+    ? rowHeaderHeight
+    : 0;
 
   return (
-    <div style={{
-      border: '1px solid var(--proppy-border, #ddd)',
-      borderRadius: '4px',
-      padding: '8px',
-      background: 'var(--proppy-container-bg, #fafafa)',
-    }}>
-      <div style={{ marginBottom: '8px', fontSize: '11px', color: 'var(--proppy-text-secondary, #666)' }}>
-        Array of {elementType.syntax} ({elements.length} item{elements.length !== 1 ? 's' : ''})
+    <div style={nestedGroupStyle}>
+      <div style={{ fontSize: 11, color: colors.textSecondary }}>
+        {elements.length} item{elements.length !== 1 ? "s" : ""}
       </div>
       {elements.map((item, index) => (
-        <div key={index} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
-          <div style={{ flex: 1 }}>
+        <div
+          key={index}
+          style={{ display: "flex", gap: 6, alignItems: "flex-start" }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
             <ItemEditor
               propDef={elementPropDef}
               value={item}
-              onChange={(newValue) => updateItem(index, newValue)}
+              onChange={newValue => updateItem(index, newValue)}
               plugins={plugins}
+              path={[...path, String(index)]}
             />
           </div>
           <button
+            type="button"
             onClick={() => removeItem(index)}
+            aria-label={`Remove item ${index + 1}`}
             style={{
-              padding: '4px 8px',
-              background: 'var(--proppy-danger-bg, #fee)',
-              color: 'var(--proppy-danger-color, inherit)',
-              border: '1px solid var(--proppy-danger-border, #fcc)',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              fontSize: '12px',
+              ...buttonStyle,
+              padding: "5px 8px",
+              marginTop: removeButtonOffset,
+              background: colors.dangerBg,
+              color: colors.dangerColor,
+              borderColor: colors.dangerBorder,
             }}
           >
             ✕
@@ -67,21 +94,18 @@ export function ArrayEditor({ elementType, value, onChange, plugins }: ArrayEdit
         </div>
       ))}
       <button
+        type="button"
         onClick={addItem}
         style={{
-          width: '100%',
-          padding: '6px',
-          background: 'var(--proppy-button-bg, #f0f0f0)',
-          color: 'var(--proppy-button-color, inherit)',
-          border: '1px solid var(--proppy-border, #ddd)',
-          borderRadius: '3px',
-          cursor: 'pointer',
-          fontSize: '12px',
-          marginTop: '4px',
+          ...buttonStyle,
+          width: "100%",
+          padding: "6px",
+          borderStyle: "dashed",
+          borderRadius: radius.sm,
         }}
       >
-        + Add Item
+        + Add item
       </button>
     </div>
-  )
+  );
 }

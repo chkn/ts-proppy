@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import type { PropDefinition } from '../../types/prop-definition.js'
 import type { PropValue } from '../../types/prop-value.js'
 import type { SelectableUnionInfo } from '../../types/selectable-union.js'
-import type { EditorPlugin } from '../types.js'
+import type { EditorPlugin, SlotPath } from '../types.js'
 import { matchUnionMember } from '../../types/selectable-union.js'
 import { ItemEditor } from '../ItemEditor.js'
+import { controlStyle } from '../theme.js'
 
 interface UnionMemberEditorProps {
   propDef: PropDefinition
@@ -13,6 +14,7 @@ interface UnionMemberEditorProps {
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
   className?: string
+  path?: SlotPath
 }
 
 /**
@@ -37,6 +39,7 @@ export function UnionMemberEditor({
   onChange,
   plugins,
   className,
+  path,
 }: UnionMemberEditorProps) {
   const { members } = unionInfo
 
@@ -73,15 +76,7 @@ export function UnionMemberEditor({
         value={String(selected)}
         onChange={(e) => handleSelect(e.target.value)}
         className={className}
-        style={className ? undefined : {
-          width: '100%',
-          padding: '4px 6px',
-          background: 'var(--proppy-input-bg, #fff)',
-          color: 'var(--proppy-input-color, inherit)',
-          border: '1px solid var(--proppy-border, #ddd)',
-          borderRadius: '3px',
-          fontSize: '12px',
-        }}
+        style={className ? undefined : controlStyle}
       >
         {members.map((m, i) => (
           <option key={i} value={String(i)}>{m.syntax}</option>
@@ -95,6 +90,7 @@ export function UnionMemberEditor({
           onChange={onChange}
           plugins={plugins}
           className={className}
+          path={path}
         />
       )}
     </div>

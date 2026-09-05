@@ -1,55 +1,64 @@
-import React from 'react'
-import type { PropValue } from '../../types/prop-value.js'
-import type { PropDefinition } from '../../types/prop-definition.js'
-import type { EditorPlugin } from '../types.js'
-import { ItemEditor } from '../ItemEditor.js'
+import type { PropDefinition } from "../../types/prop-definition.js";
+import type { PropValue } from "../../types/prop-value.js";
+import { ItemEditor } from "../ItemEditor.js";
+import { PropRow } from "../PropRow.js";
+import { nestedGroupStyle } from "../theme.js";
+import type { EditorPlugin, SlotPath } from "../types.js";
 
 interface ObjectEditorProps {
-  properties: PropDefinition[]
-  value: PropValue | undefined
-  onChange: (value: PropValue) => void
-  plugins?: EditorPlugin[]
+  properties: PropDefinition[];
+  value: PropValue | undefined;
+  onChange: (value: PropValue) => void;
+  plugins?: EditorPlugin[];
+  path?: SlotPath;
 }
 
-export function ObjectEditor({ properties, value, onChange, plugins }: ObjectEditorProps) {
-  const objProps: Record<string, PropValue> = value?.kind === 'object' ? { ...value.properties } : {}
+/**
+ * An object type's fields, one {@link PropRow} each. Nesting reads as an
+ * indented tree (a left rule, not a bordered box per level) so a few levels
+ * deep still looks like one shape rather than boxes stacked inside boxes.
+ */
+export function ObjectEditor({
+  properties,
+  value,
+  onChange,
+  plugins,
+  path = [],
+}: ObjectEditorProps) {
+  const objProps: Record<string, PropValue> =
+    value?.kind === "object" ? { ...value.properties } : {};
 
   const updateField = (fieldName: string, fieldValue: PropValue) => {
-    const newProps = { ...objProps, [fieldName]: fieldValue }
-    onChange({ kind: 'object', properties: newProps })
-  }
+    const newProps = { ...objProps, [fieldName]: fieldValue };
+    onChange({ kind: "object", properties: newProps });
+  };
+
+  // Several sibling fields of the same shape (e.g. one per tool in a toolset)
+  // is exactly the case that turns into a wall of repeated forms if every one
+  // starts open — so collapse by default once there's more than one to show.
+  // A single nested object has nothing to declutter, so it opens as-is.
+  const defaultCollapsed = properties.length > 1;
 
   return (
-    <div style={{
-      border: '1px solid var(--proppy-border, #ddd)',
-      borderRadius: '4px',
-      padding: '8px',
-      background: 'var(--proppy-container-bg, #fafafa)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px',
-    }}>
+    <div style={nestedGroupStyle}>
       {properties.map(prop => (
-        <div key={prop.name}>
-          <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px', fontWeight: 500, color: 'var(--proppy-text-primary, inherit)' }}>
-            {prop.name}{prop.optional ? '' : ' *'}
-            <span style={{ color: 'var(--proppy-text-muted, #999)', fontWeight: 'normal', marginLeft: '4px' }}>
-              {prop.type.syntax}
-            </span>
-          </label>
-          {prop.description && (
-            <div style={{ fontSize: '10px', color: 'var(--proppy-text-secondary, #666)', marginBottom: '2px', fontStyle: 'italic' }}>
-              {prop.description}
-            </div>
-          )}
+        <PropRow
+          key={prop.name}
+          name={prop.name}
+          type={prop.type}
+          optional={prop.optional}
+          description={prop.description}
+          defaultCollapsed={defaultCollapsed}
+        >
           <ItemEditor
             propDef={prop}
             value={objProps[prop.name]}
-            onChange={(newValue) => updateField(prop.name, newValue)}
+            onChange={newValue => updateField(prop.name, newValue)}
             plugins={plugins}
+            path={[...path, prop.name]}
           />
-        </div>
+        </PropRow>
       ))}
     </div>
-  )
+  );
 }

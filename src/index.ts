@@ -14,6 +14,7 @@ export { getSelectableUnionInfo, matchUnionMember } from './types/selectable-uni
 export { extractPropertiesFromDeclaration, extractPropertiesFromParameters, extractPropertiesFromTypeNode } from './extraction/extract-properties.js'
 export { extractPropertiesFromObjectLiteral } from './extraction/extract-values.js'
 export { buildPropType } from './extraction/build-prop-type.js'
+export { buildPropTypeFromType, isOpaqueType } from './extraction/build-prop-type-from-type.js'
 export { findTypeDeclaration, parseValueFromExpression, inferPropTypeFromExpression } from './extraction/helpers.js'
 
 // Editing

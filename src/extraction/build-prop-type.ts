@@ -2,7 +2,7 @@ import ts from 'typescript'
 import type { PropType } from '../types/prop-type.js'
 import { findTypeDeclaration } from './helpers.js'
 import { extractDefinitionsFromDeclaration, extractDefinitionsFromTypeNode } from './extract-properties.js'
-import { buildPropTypeFromType } from './build-prop-type-from-type.js'
+import { buildPropTypeFromType, isOpaqueType } from './build-prop-type-from-type.js'
 
 function isFunctionType(typeNode: ts.TypeNode | undefined): boolean {
   if (!typeNode) return false
@@ -81,6 +81,18 @@ export function buildPropType(
   if (isFunctionType(typeNode)) {
     const parameters = extractDefinitionsFromTypeNode(typeNode, sourceFile, typeChecker)
     return { kind: 'function', syntax, parameters }
+  }
+
+  // Types no form can build a value of, asked before either expansion path
+  // below: an interface or inline object whose members are all methods, or a
+  // reference that resolves to a class instance, must not become a form over
+  // its own prototype. Needs the checker — without one the syntax tree alone
+  // can't tell a service handle from a data shape, and expansion is the safer
+  // default.
+  if (typeChecker && (ts.isTypeLiteralNode(typeNode) || ts.isTypeReferenceNode(typeNode))) {
+    if (isOpaqueType(typeChecker.getTypeAtLocation(typeNode), typeChecker, typeNode)) {
+      return { kind: 'opaque', syntax }
+    }
   }
 
   // Type literals (inline objects)

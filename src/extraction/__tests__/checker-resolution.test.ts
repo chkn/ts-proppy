@@ -147,7 +147,77 @@ export function greet(a: Omit<User, 'secret'>, b: Partial<User>) {}`,
       { '/proj/prompt.ts': `export function at(when: Date) {}` },
       '/proj/prompt.ts'
     )
-    expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'Date' })
+    expect(defs[0].type).toEqual({ kind: 'opaque', syntax: 'Date' })
+  })
+
+  test('marks an all-method service interface opaque', () => {
+    const defs = extractParams(
+      {
+        '/proj/rpc.ts': `export interface Inventory {
+  list(): Promise<string[]>
+  count: () => number
+}`,
+        '/proj/prompt.ts': `import type { Inventory } from './rpc'
+export function run(inv: Inventory) {}`,
+      },
+      '/proj/prompt.ts'
+    )
+    expect(defs[0].type).toEqual({ kind: 'opaque', syntax: 'Inventory' })
+  })
+
+  test('marks a class instance type opaque rather than expanding its members', () => {
+    const defs = extractParams(
+      {
+        '/proj/db.ts': `export declare class Database {
+  readonly url: string
+  query(sql: string): Promise<unknown[]>
+}`,
+        '/proj/prompt.ts': `import type { Database } from './db'
+export function run(db: Database) {}`,
+      },
+      '/proj/prompt.ts'
+    )
+    // `url` is plain data, so the all-method rule would not fire here: this is
+    // the class rule specifically.
+    expect(defs[0].type).toEqual({ kind: 'opaque', syntax: 'Database' })
+  })
+
+  test('sees a class through an intersection', () => {
+    const defs = extractParams(
+      {
+        '/proj/db.ts': `export declare class Database { query(sql: string): void }
+export type Db = Database & { $client: { name: string } }`,
+        '/proj/prompt.ts': `import type { Db } from './db'
+export function run(db: Db) {}`,
+      },
+      '/proj/prompt.ts'
+    )
+    // Building the whole means building the class half, which no form can do.
+    expect(defs[0].type.kind).toBe('opaque')
+  })
+
+  test('keeps a branded primitive editable despite the intersection', () => {
+    const defs = extractParams(
+      {
+        '/proj/ids.ts': `export type TaskId = string & { readonly __brand: 'TaskId' }`,
+        '/proj/prompt.ts': `import type { TaskId } from './ids'
+export function run(taskId: TaskId) {}`,
+      },
+      '/proj/prompt.ts'
+    )
+    expect(defs[0].type.kind).toBe('primitive')
+    expect(defs[0].type).toMatchObject({ base: 'string' })
+  })
+
+  test('opacity does not swallow an ordinary data object', () => {
+    const defs = extractParams(
+      {
+        '/proj/prompt.ts': `export function run(info: { title: string; describe(): string }) {}`,
+      },
+      '/proj/prompt.ts'
+    )
+    // One data property is enough: the all-method rule must not fire.
+    expect(defs[0].type.kind).toBe('object')
   })
 
   test('keeps a template-literal string type opaque, tagged with its string base for editor routing', () => {
