@@ -40,11 +40,13 @@ interface ItemEditorInternalProps {
   className?: string
   /** This slot's position in the value being edited. See {@link SlotPath}. */
   path?: SlotPath
+  /** See {@link ItemEditorProps.disabled}. */
+  disabled?: boolean
 }
 
 const ROOT_PATH: SlotPath = []
 
-export function ItemEditor({ value, onChange, propDef, plugins, className, path = ROOT_PATH }: ItemEditorInternalProps) {
+export function ItemEditor({ value, onChange, propDef, plugins, className, path = ROOT_PATH, disabled }: ItemEditorInternalProps) {
   const { type } = propDef
 
   // Check plugins first
@@ -52,29 +54,29 @@ export function ItemEditor({ value, onChange, propDef, plugins, className, path 
     for (const plugin of plugins) {
       if (plugin.match(type, path)) {
         const PluginComponent = plugin.component
-        return <PluginComponent propDef={propDef} value={value} onChange={onChange} path={path} />
+        return <PluginComponent propDef={propDef} value={value} onChange={onChange} path={path} disabled={disabled} />
       }
     }
   }
 
   // Template values, or string properties with interpolatables available
   if (value?.kind === 'template' || (primitiveBase(type) === 'string' && propDef.interpolatables?.length)) {
-    return <TemplateEditor propDef={propDef} value={value} onChange={onChange} className={className} />
+    return <TemplateEditor propDef={propDef} value={value} onChange={onChange} className={className} disabled={disabled} />
   }
 
   // Function types
   if (type.kind === 'function') {
-    return <FunctionEditor propDef={propDef} value={value} onChange={onChange} />
+    return <FunctionEditor propDef={propDef} value={value} onChange={onChange} disabled={disabled} />
   }
 
   // Array types
   if (type.kind === 'array') {
-    return <ArrayEditor elementType={type.elementType} value={value} onChange={onChange} plugins={plugins} path={path} />
+    return <ArrayEditor elementType={type.elementType} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Tuple types
   if (type.kind === 'tuple') {
-    return <TupleEditor types={type.types} value={value} onChange={onChange} plugins={plugins} path={path} />
+    return <TupleEditor types={type.types} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Discriminated unions
@@ -87,13 +89,14 @@ export function ItemEditor({ value, onChange, propDef, plugins, className, path 
         onChange={onChange}
         plugins={plugins}
         path={path}
+        disabled={disabled}
       />
     )
   }
 
   // Constant unions (dropdown)
   if (type.kind === 'union' && type.types.every(t => t.kind === 'constant')) {
-    return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} className={className} />
+    return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} className={className} disabled={disabled} />
   }
 
   // Any other union: a dropdown over its members, plus the selected member's editor
@@ -108,28 +111,29 @@ export function ItemEditor({ value, onChange, propDef, plugins, className, path 
         plugins={plugins}
         className={className}
         path={path}
+        disabled={disabled}
       />
     )
   }
 
   // Date type
   if (type.syntax === 'Date') {
-    return <DateEditor propDef={propDef} value={value} onChange={onChange} />
+    return <DateEditor propDef={propDef} value={value} onChange={onChange} disabled={disabled} />
   }
 
   // String primitive
   if (primitiveBase(type) === 'string') {
-    return <StringEditor propDef={propDef} value={value} onChange={onChange} className={className} />
+    return <StringEditor propDef={propDef} value={value} onChange={onChange} className={className} disabled={disabled} />
   }
 
   // Number primitive
   if (primitiveBase(type) === 'number') {
-    return <NumberEditor propDef={propDef} value={value} onChange={onChange} className={className} />
+    return <NumberEditor propDef={propDef} value={value} onChange={onChange} className={className} disabled={disabled} />
   }
 
   // Boolean primitive
   if (primitiveBase(type) === 'boolean') {
-    return <BooleanEditor propDef={propDef} value={value} onChange={onChange} className={className} />
+    return <BooleanEditor propDef={propDef} value={value} onChange={onChange} className={className} disabled={disabled} />
   }
 
   // Types no form can build a value of. Routed before the JSON fallback: a raw
@@ -140,9 +144,9 @@ export function ItemEditor({ value, onChange, propDef, plugins, className, path 
 
   // Object types with known properties
   if (type.kind === 'object' && type.properties.length > 0) {
-    return <ObjectEditor properties={type.properties} value={value} onChange={onChange} plugins={plugins} path={path} />
+    return <ObjectEditor properties={type.properties} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Fallback
-  return <JsonFallbackEditor propDef={propDef} value={value} onChange={onChange} className={className} />
+  return <JsonFallbackEditor propDef={propDef} value={value} onChange={onChange} className={className} disabled={disabled} />
 }

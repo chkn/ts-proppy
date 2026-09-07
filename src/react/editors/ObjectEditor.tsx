@@ -11,6 +11,7 @@ interface ObjectEditorProps {
   onChange: (value: PropValue) => void;
   plugins?: EditorPlugin[];
   path?: SlotPath;
+  disabled?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function ObjectEditor({
   onChange,
   plugins,
   path = [],
+  disabled,
 }: ObjectEditorProps) {
   const objProps: Record<string, PropValue> =
     value?.kind === "object" ? { ...value.properties } : {};
@@ -56,6 +58,7 @@ export function ObjectEditor({
             onChange={newValue => updateField(prop.name, newValue)}
             plugins={plugins}
             path={[...path, prop.name]}
+            disabled={disabled}
           />
         </PropRow>
       ))}

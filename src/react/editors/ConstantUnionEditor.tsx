@@ -10,7 +10,7 @@ function parseConstantUnion(propType: PropType): any[] {
     .map(t => t.value)
 }
 
-export function ConstantUnionEditor({ value, onChange, propDef, className }: ItemEditorProps) {
+export function ConstantUnionEditor({ value, onChange, propDef, className, disabled }: ItemEditorProps) {
   const options = parseConstantUnion(propDef.type)
   const defaultStr = propDef.defaultValue?.kind === 'primitive' ? String(propDef.defaultValue.value) : ''
   const currentValue = value?.kind === 'primitive' ? String(value.value) : defaultStr
@@ -20,6 +20,7 @@ export function ConstantUnionEditor({ value, onChange, propDef, className }: Ite
       value={currentValue || ''}
       onChange={(e) => onChange({ kind: 'primitive', value: e.target.value })}
       className={className}
+      disabled={disabled}
       style={className ? undefined : controlStyle}
     >
       {propDef.optional && <option value="">-- Select --</option>}

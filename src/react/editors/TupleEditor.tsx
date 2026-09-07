@@ -11,9 +11,10 @@ interface TupleEditorProps {
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
   path?: SlotPath
+  disabled?: boolean
 }
 
-export function TupleEditor({ types, value, onChange, plugins, path = [] }: TupleEditorProps) {
+export function TupleEditor({ types, value, onChange, plugins, path = [], disabled }: TupleEditorProps) {
   const elements: PropValue[] = value?.kind === 'tuple' ? value.elements : []
 
   const updateItem = (index: number, newValue: PropValue) => {
@@ -34,6 +35,7 @@ export function TupleEditor({ types, value, onChange, plugins, path = [] }: Tupl
               onChange={newValue => updateItem(index, newValue)}
               plugins={plugins}
               path={[...path, String(index)]}
+              disabled={disabled}
             />
           </PropRow>
         )

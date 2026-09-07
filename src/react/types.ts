@@ -8,6 +8,13 @@ export interface PropsEditorProps {
   onChange: (name: string, value: PropValue) => void
   /** Custom editor plugins (checked before built-in editors) */
   plugins?: EditorPlugin[]
+  /**
+   * Renders every field read-only: focusable and selectable, so a shown
+   * value can still be read and copied, but not changed. A container
+   * editor's own add/remove controls are disabled too; its collapse/expand
+   * disclosure is not — that's navigation, not an edit.
+   */
+  disabled?: boolean
 }
 
 /**
@@ -27,6 +34,8 @@ export interface ItemEditorProps {
   className?: string
   /** This slot's position in the value being edited. See {@link SlotPath}. */
   path?: SlotPath
+  /** See {@link PropsEditorProps.disabled}. */
+  disabled?: boolean
 }
 
 export interface EditorPlugin {

@@ -10,7 +10,6 @@ import { colors, controlStyle, radius } from '../theme.js'
 export interface TemplateEditorProps extends ItemEditorProps {
   className?: string
   placeholder?: string
-  readOnly?: boolean
   onBlur?: () => void
 }
 
@@ -272,7 +271,7 @@ function itemsEqual(a: SuggestItem[], b: SuggestItem[]): boolean {
   })
 }
 
-export function TemplateEditor({ value, onChange, propDef, className, placeholder, readOnly, onBlur }: TemplateEditorProps) {
+export function TemplateEditor({ value, onChange, propDef, className, placeholder, disabled, onBlur }: TemplateEditorProps) {
   const roots = propDef.interpolatables ?? []
   const tmplValue = asTemplateValue(value)
   const editorRef = useRef<HTMLDivElement>(null)
@@ -497,7 +496,7 @@ export function TemplateEditor({ value, onChange, propDef, className, placeholde
     <>
       <div
         ref={editorRef}
-        contentEditable={!readOnly}
+        contentEditable={!disabled}
         suppressContentEditableWarning
         className={className}
         data-placeholder={placeholder}

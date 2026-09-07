@@ -4,7 +4,7 @@ import { valueToSourceText } from '../../editing/value-to-string.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
 import { controlStyle } from '../theme.js'
 
-export function JsonFallbackEditor({ value, onChange, propDef, className }: ItemEditorProps) {
+export function JsonFallbackEditor({ value, onChange, propDef, className, disabled }: ItemEditorProps) {
   const text = value ? valueToSourceText(value) : ''
 
   return (
@@ -14,6 +14,7 @@ export function JsonFallbackEditor({ value, onChange, propDef, className }: Item
       placeholder={defaultPlaceholder(propDef)}
       className={className}
       data-proppy-editor="json-fallback"
+      readOnly={disabled}
       style={className ? undefined : {
         ...controlStyle,
         fontSize: 11,

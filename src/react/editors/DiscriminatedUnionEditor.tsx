@@ -11,6 +11,7 @@ interface DiscriminatedUnionEditorProps {
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
   path?: SlotPath
+  disabled?: boolean
 }
 
 export function DiscriminatedUnionEditor({
@@ -19,6 +20,7 @@ export function DiscriminatedUnionEditor({
   onChange,
   plugins,
   path = [],
+  disabled,
 }: DiscriminatedUnionEditorProps) {
   const { discriminator, cases } = discriminatedUnionInfo
 
@@ -48,7 +50,12 @@ export function DiscriminatedUnionEditor({
         <label style={{ display: 'block', fontSize: 12, marginBottom: 4, fontWeight: 500, color: colors.textPrimary }}>
           {discriminator} *
         </label>
-        <select value={currentDiscriminatorValue} onChange={e => handleDiscriminatorChange(e.target.value)} style={controlStyle}>
+        <select
+          value={currentDiscriminatorValue}
+          onChange={e => handleDiscriminatorChange(e.target.value)}
+          style={controlStyle}
+          disabled={disabled}
+        >
           {cases.map(c => (
             <option key={String(c.discriminatorValue)} value={String(c.discriminatorValue)}>
               {String(c.discriminatorValue)}
@@ -67,6 +74,7 @@ export function DiscriminatedUnionEditor({
               onChange={newValue => updateField(prop.name, newValue)}
               plugins={plugins}
               path={[...path, prop.name]}
+              disabled={disabled}
             />
           </PropRow>
         ))}

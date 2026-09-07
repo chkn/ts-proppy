@@ -3,7 +3,7 @@ import type { ItemEditorProps } from '../types.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
 import { colors, controlStyle, radius } from '../theme.js'
 
-export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
+export function FunctionEditor({ value, onChange, propDef, disabled }: ItemEditorProps) {
   const parameters = propDef.type.kind === 'function' ? propDef.type.parameters : []
   const paramSignature = parameters.map(p =>
     `${p.name}${p.optional ? '?' : ''}: ${p.type.syntax}`
@@ -34,6 +34,7 @@ export function FunctionEditor({ value, onChange, propDef }: ItemEditorProps) {
           body: e.target.value,
         })}
         placeholder={placeholder}
+        readOnly={disabled}
         style={{
           ...controlStyle,
           padding: '6px 8px',

@@ -3,7 +3,7 @@ import type { ItemEditorProps } from '../types.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
 import { controlStyle } from '../theme.js'
 
-export function StringEditor({ value, onChange, propDef, className }: ItemEditorProps) {
+export function StringEditor({ value, onChange, propDef, className, disabled }: ItemEditorProps) {
   const strValue = value?.kind === 'primitive' && typeof value.value === 'string' ? value.value : ''
 
   return (
@@ -13,6 +13,7 @@ export function StringEditor({ value, onChange, propDef, className }: ItemEditor
       placeholder={defaultPlaceholder(propDef)}
       className={className}
       rows={1}
+      readOnly={disabled}
       style={className ? undefined : { ...controlStyle, resize: 'vertical' }}
     />
   )

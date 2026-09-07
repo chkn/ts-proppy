@@ -15,6 +15,7 @@ interface UnionMemberEditorProps {
   plugins?: EditorPlugin[]
   className?: string
   path?: SlotPath
+  disabled?: boolean
 }
 
 /**
@@ -40,6 +41,7 @@ export function UnionMemberEditor({
   plugins,
   className,
   path,
+  disabled,
 }: UnionMemberEditorProps) {
   const { members } = unionInfo
 
@@ -77,6 +79,7 @@ export function UnionMemberEditor({
         onChange={(e) => handleSelect(e.target.value)}
         className={className}
         style={className ? undefined : controlStyle}
+        disabled={disabled}
       >
         {members.map((m, i) => (
           <option key={i} value={String(i)}>{m.syntax}</option>
@@ -91,6 +94,7 @@ export function UnionMemberEditor({
           plugins={plugins}
           className={className}
           path={path}
+          disabled={disabled}
         />
       )}
     </div>

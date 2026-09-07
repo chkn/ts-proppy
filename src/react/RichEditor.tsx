@@ -18,19 +18,21 @@ interface RichEditorProps {
   onChange: (value: PropValue) => void
   plugins?: EditorPlugin[]
   path?: SlotPath
+  /** See {@link ItemEditorProps.disabled}. */
+  disabled?: boolean
 }
 
-export function RichEditor({ propType, value, onChange, plugins, path = [] }: RichEditorProps) {
+export function RichEditor({ propType, value, onChange, plugins, path = [], disabled }: RichEditorProps) {
   const propDef = { name: '', type: propType, optional: false }
 
   // Array type
   if (propType.kind === 'array') {
-    return <ArrayEditor elementType={propType.elementType} value={value} onChange={onChange} plugins={plugins} path={path} />
+    return <ArrayEditor elementType={propType.elementType} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Tuple type
   if (propType.kind === 'tuple') {
-    return <TupleEditor types={propType.types} value={value} onChange={onChange} plugins={plugins} path={path} />
+    return <TupleEditor types={propType.types} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Discriminated union
@@ -43,13 +45,14 @@ export function RichEditor({ propType, value, onChange, plugins, path = [] }: Ri
         onChange={onChange}
         plugins={plugins}
         path={path}
+        disabled={disabled}
       />
     )
   }
 
   // Constant union
   if (propType.kind === 'union' && propType.types.every(t => t.kind === 'constant')) {
-    return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} />
+    return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} disabled={disabled} />
   }
 
   // Any other union: a dropdown over its members
@@ -63,15 +66,16 @@ export function RichEditor({ propType, value, onChange, plugins, path = [] }: Ri
         onChange={onChange}
         plugins={plugins}
         path={path}
+        disabled={disabled}
       />
     )
   }
 
   // Object with known properties
   if (propType.kind === 'object' && propType.properties.length > 0) {
-    return <ObjectEditor properties={propType.properties} value={value} onChange={onChange} plugins={plugins} path={path} />
+    return <ObjectEditor properties={propType.properties} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Fallback
-  return <JsonFallbackEditor propDef={propDef} value={value} onChange={onChange} />
+  return <JsonFallbackEditor propDef={propDef} value={value} onChange={onChange} disabled={disabled} />
 }

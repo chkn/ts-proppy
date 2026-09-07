@@ -17,6 +17,7 @@ interface ArrayEditorProps {
   onChange: (value: PropValue) => void;
   plugins?: EditorPlugin[];
   path?: SlotPath;
+  disabled?: boolean;
 }
 
 export function ArrayEditor({
@@ -25,6 +26,7 @@ export function ArrayEditor({
   onChange,
   plugins,
   path = [],
+  disabled,
 }: ArrayEditorProps) {
   const elements: PropValue[] = value?.kind === "array" ? value.elements : [];
 
@@ -74,12 +76,14 @@ export function ArrayEditor({
               onChange={newValue => updateItem(index, newValue)}
               plugins={plugins}
               path={[...path, String(index)]}
+              disabled={disabled}
             />
           </div>
           <button
             type="button"
             onClick={() => removeItem(index)}
             aria-label={`Remove item ${index + 1}`}
+            disabled={disabled}
             style={{
               ...buttonStyle,
               padding: "5px 8px",
@@ -96,6 +100,7 @@ export function ArrayEditor({
       <button
         type="button"
         onClick={addItem}
+        disabled={disabled}
         style={{
           ...buttonStyle,
           width: "100%",

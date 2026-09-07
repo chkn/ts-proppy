@@ -3,7 +3,7 @@ import type { ItemEditorProps } from '../types.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
 import { controlStyle } from '../theme.js'
 
-export function DateEditor({ value, onChange, propDef }: ItemEditorProps) {
+export function DateEditor({ value, onChange, propDef, disabled }: ItemEditorProps) {
   const strValue = value?.kind === 'primitive' && typeof value.value === 'string' ? value.value : ''
 
   return (
@@ -12,6 +12,7 @@ export function DateEditor({ value, onChange, propDef }: ItemEditorProps) {
       value={strValue}
       onChange={(e) => onChange({ kind: 'primitive', value: e.target.value })}
       placeholder={defaultPlaceholder(propDef)}
+      readOnly={disabled}
       style={controlStyle}
     />
   )

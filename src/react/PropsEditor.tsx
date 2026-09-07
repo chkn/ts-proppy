@@ -8,7 +8,7 @@ import { RichEditor } from './RichEditor.js'
 import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
 import { buttonStyle, colors } from './theme.js'
 
-export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
+export function PropsEditor({ props, onChange, plugins, disabled }: PropsEditorProps) {
   const [jsonMode, setJsonMode] = useState<Record<string, boolean>>({})
 
   const toggleJsonMode = (propName: string) => {
@@ -35,12 +35,14 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
             onChange={(value: PropValue) => onChange(propDef.name, value)}
             plugins={plugins}
             path={[propDef.name]}
+            disabled={disabled}
           />
         ) : isJson ? (
           <JsonFallbackEditor
             propDef={propDef}
             value={currentValue}
             onChange={(value: PropValue) => onChange(propDef.name, value)}
+            disabled={disabled}
           />
         ) : (
           <RichEditor
@@ -49,6 +51,7 @@ export function PropsEditor({ props, onChange, plugins }: PropsEditorProps) {
             onChange={(value: PropValue) => onChange(propDef.name, value)}
             plugins={plugins}
             path={[propDef.name]}
+            disabled={disabled}
           />
         )
 
