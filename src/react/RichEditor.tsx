@@ -7,6 +7,7 @@ import { getSelectableUnionInfo } from '../types/selectable-union.js'
 import { ArrayEditor } from './editors/ArrayEditor.js'
 import { TupleEditor } from './editors/TupleEditor.js'
 import { ObjectEditor } from './editors/ObjectEditor.js'
+import { RecordEditor } from './editors/RecordEditor.js'
 import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
 import { ConstantUnionEditor } from './editors/ConstantUnionEditor.js'
 import { UnionMemberEditor } from './editors/UnionMemberEditor.js'
@@ -27,12 +28,17 @@ export function RichEditor({ propType, value, onChange, plugins, path = [], disa
 
   // Array type
   if (propType.kind === 'array') {
-    return <ArrayEditor elementType={propType.elementType} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+    return <ArrayEditor element={propType.element} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Tuple type
   if (propType.kind === 'tuple') {
-    return <TupleEditor types={propType.types} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+    return <TupleEditor elements={propType.elements} rest={propType.rest} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+  }
+
+  // Record type
+  if (propType.kind === 'record') {
+    return <RecordEditor value={propType.value} current={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Discriminated union

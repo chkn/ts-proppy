@@ -96,7 +96,7 @@ describe('extractPropertiesFromObjectLiteral', () => {
     const defs: PropDefinition[] = [
       {
         name: 'items',
-        type: { kind: 'array', syntax: 'string[]', elementType: { kind: 'primitive', syntax: 'string' } },
+        type: { kind: 'array', syntax: 'string[]', element: { name: '', type: { kind: 'primitive', syntax: 'string' }, optional: false } },
         optional: false,
       },
     ]
@@ -206,7 +206,7 @@ describe('extractPropertiesFromObjectLiteral (schemaless)', () => {
     const source = `const x = { items: ["a", "b"] }`
     const result = extractValues(source)
 
-    expect(result.definitions[0].type).toMatchObject({ kind: 'array', elementType: { kind: 'primitive', syntax: 'string' } })
+    expect(result.definitions[0].type).toMatchObject({ kind: 'array', element: { type: { kind: 'primitive', syntax: 'string' } } })
   })
 
   test('infers object type from properties', () => {

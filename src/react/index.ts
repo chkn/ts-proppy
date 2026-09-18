@@ -1,8 +1,0 @@
-export { PropsEditor } from './PropsEditor.js'
-export { ItemEditor } from './ItemEditor.js'
-export { RichEditor } from './RichEditor.js'
-export { PropRow } from './PropRow.js'
-export type { PropRowProps } from './PropRow.js'
-export { isComplexPropType } from './complex-type.js'
-export { shortSyntax, typeSummary } from './format-syntax.js'
-export type { PropsEditorProps, ItemEditorProps, EditorPlugin, SlotPath } from './types.js'

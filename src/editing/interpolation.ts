@@ -145,3 +145,21 @@ export function interpolationSuggestions(
   const candidates = level.filter(n => n.name.toLowerCase().startsWith(lower))
   return { candidates, fragment }
 }
+
+/**
+ * Every path through a tree of interpolatables, parents before their
+ * children: `[['ticket'], ['ticket', 'subject'], ['product']]`. What a slot
+ * can be set to reference.
+ */
+export function interpolatablePaths(roots: readonly InterpolatableIdentifier[]): string[][] {
+  const out: string[][] = []
+  const walk = (nodes: readonly InterpolatableIdentifier[], prefix: string[]) => {
+    for (const node of nodes) {
+      const path = [...prefix, node.name]
+      out.push(path)
+      if (node.children) walk(node.children, path)
+    }
+  }
+  walk(roots, [])
+  return out
+}

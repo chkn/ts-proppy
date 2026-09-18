@@ -55,7 +55,12 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
     }
 
     case 'functionCall': {
-      const spec = value.binding?.kind === 'import' ? value.binding.spec : undefined
+      // Unresolved candidates: the first import among them is the one a file
+      // without a matching destructure would get.
+      const binding = Array.isArray(value.binding)
+        ? value.binding.find(b => b.kind === 'import')
+        : value.binding
+      const spec = binding?.kind === 'import' ? binding.spec : undefined
       let fn: Function
       let source: string
       if (!spec) {
@@ -71,6 +76,19 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
       }
       const args = await Promise.all(value.args.map(v => materializeValue(v, scope)))
       return fn(...args)
+    }
+
+    case 'reference': {
+      const [root, ...rest] = value.path
+      if (!scope || !(root in scope)) throw new Error(`'${root}' not found in scope`)
+      let cur: unknown = scope[root]
+      for (const key of rest) {
+        if (cur == null || typeof cur !== 'object' || !(key in cur)) {
+          throw new Error(`'${value.path.join('.')}' not found in scope`)
+        }
+        cur = (cur as Record<string, unknown>)[key]
+      }
+      return cur
     }
 
     case 'raw': {

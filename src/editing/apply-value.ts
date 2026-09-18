@@ -1,7 +1,7 @@
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropValue } from '../types/prop-value.js'
 import type { ExtractedProps } from '../types/extracted-props.js'
-import { valueToSourceText, collectImports } from './value-to-string.js'
+import { valueToSourceText, collectImports, propertyKeyToSource } from './value-to-string.js'
 import { ensureImport } from './ensure-import.js'
 
 /** Update an existing property value in source code */
@@ -43,12 +43,12 @@ export function addProperty(
   if (hasProperties) {
     // Insert after last property; add comma first if the last property has no trailing comma
     const needsComma = sourceCode[lastPropertyEnd - 1] !== ','
-    const insertText = `${needsComma ? ',' : ''}\n${indent}${propertyName}: ${valueText},`
+    const insertText = `${needsComma ? ',' : ''}\n${indent}${propertyKeyToSource(propertyName)}: ${valueText},`
     result = sourceCode.slice(0, lastPropertyEnd) + insertText + sourceCode.slice(lastPropertyEnd)
   } else {
     // Empty object
     let hasNewline = false
-    let insertText = `\n${indent}${propertyName}: ${valueText},`
+    let insertText = `\n${indent}${propertyKeyToSource(propertyName)}: ${valueText},`
     for (let i = lastPropertyEnd; i < objectEnd; i++) {
       if (sourceCode[i] === '\n') {
         hasNewline = true

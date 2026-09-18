@@ -15,5 +15,11 @@ export function isComplexPropType(type: PropType): boolean {
   // that member's own complexity is what matters, not the union itself.
   if (getSelectableUnionInfo(type)) return false
   if (type.kind === 'function') return false
-  return type.kind === 'object' || type.kind === 'union' || type.kind === 'array' || type.kind === 'tuple'
+  return (
+    type.kind === 'object' ||
+    type.kind === 'record' ||
+    type.kind === 'union' ||
+    type.kind === 'array' ||
+    type.kind === 'tuple'
+  )
 }

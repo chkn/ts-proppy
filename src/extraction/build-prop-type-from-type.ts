@@ -1,6 +1,7 @@
 import ts from 'typescript'
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PrimitiveBase, PropType } from '../types/prop-type.js'
+import { slotDefinition } from '../types/prop-type.js'
 
 /**
  * Depth limit for recursing into resolved types. Guards against self-referential
@@ -179,7 +180,12 @@ function symbolToPropDefinition(
   depth: number,
   ctx: BuildContext
 ): PropDefinition {
-  const optional = !!(symbol.flags & ts.SymbolFlags.Optional)
+  // A parameter's `?` (or default) isn't carried by its symbol's flags, only
+  // by its declaration.
+  const declaration = symbol.valueDeclaration
+  const optional =
+    !!(symbol.flags & ts.SymbolFlags.Optional) ||
+    (!!declaration && ts.isParameter(declaration) && typeChecker.isOptionalParameter(declaration))
   let type = typeChecker.getTypeOfSymbolAtLocation(symbol, location)
   // An optional property's type includes `undefined`; strip it so the editor
   // shows the underlying shape rather than a union with undefined.
@@ -234,6 +240,14 @@ function build(
 
   if (depth >= MAX_DEPTH) return { kind: 'primitive', syntax }
 
+  // A generic parameter (`criteria: T` where `T extends ChoiceCriteria`) is
+  // edited as whatever its constraint allows.
+  if (type.flags & ts.TypeFlags.TypeParameter) {
+    const constraint = typeChecker.getBaseConstraintOfType(type)
+    if (constraint && constraint !== type) return build(constraint, typeChecker, location, depth, ctx)
+    return { kind: 'primitive', syntax: 'unknown' }
+  }
+
   // Literal constants
   if (type.isStringLiteral() || type.isNumberLiteral()) {
     return { kind: 'constant', syntax, value: type.value }
@@ -258,13 +272,10 @@ function build(
     const elementType: PropType = element
       ? build(element, typeChecker, location, depth + 1, ctx)
       : { kind: 'primitive', syntax: 'any' }
-    return { kind: 'array', syntax, elementType }
+    return { kind: 'array', syntax, element: slotDefinition(elementType) }
   }
   if (typeChecker.isTupleType(type)) {
-    const types = typeChecker
-      .getTypeArguments(type as ts.TypeReference)
-      .map(t => build(t, typeChecker, location, depth + 1, ctx))
-    return { kind: 'tuple', syntax, types }
+    return buildTuple(type as ts.TupleTypeReference, syntax, typeChecker, location, depth, ctx)
   }
 
   // A branded primitive (`string & { __brand: 'TaskId' }`) is edited as the
@@ -331,5 +342,54 @@ function build(
     }
   }
 
+  // No named members, but a string index signature: keys are the caller's to
+  // choose (`{ [name: string]: T }`, `Record<string, T>`).
+  const indexType = type.getStringIndexType()
+  if (indexType) {
+    const value = build(indexType, typeChecker, location, depth + 1, ctx)
+    return { kind: 'record', syntax, value: slotDefinition(value) }
+  }
+
   return { kind: 'primitive', syntax }
+}
+
+/**
+ * A tuple's fixed elements, plus a `rest` definition when it is variadic
+ * (`[A, B, ...C[]]`). The checker reports a rest element's *element* type as
+ * its type argument, flagged `Rest`; a variadic element (`...T` for a generic
+ * array `T`) is treated the same way, as any number of `T`'s elements.
+ */
+function buildTuple(
+  type: ts.TupleTypeReference,
+  syntax: string,
+  typeChecker: ts.TypeChecker,
+  location: ts.Node,
+  depth: number,
+  ctx: BuildContext
+): PropType {
+  const args = typeChecker.getTypeArguments(type)
+  const flags = type.target.elementFlags
+  const elements: PropDefinition[] = []
+  let rest: PropDefinition | undefined
+
+  args.forEach((arg, i) => {
+    const flag = flags[i] ?? ts.ElementFlags.Required
+    if (flag & ts.ElementFlags.Variable) {
+      // Only the first variable-length element is representable; anything
+      // after it (`[...A[], B]`) can't be addressed by a fixed position.
+      if (rest) return
+      let elementType = arg
+      if (flag & ts.ElementFlags.Variadic && typeChecker.isArrayType(arg)) {
+        elementType = typeChecker.getTypeArguments(arg as ts.TypeReference)[0] ?? arg
+      }
+      rest = slotDefinition(build(elementType, typeChecker, location, depth + 1, ctx), '[...]')
+      return
+    }
+    if (rest) return
+    const def = slotDefinition(build(arg, typeChecker, location, depth + 1, ctx), `[${i}]`)
+    if (flag & ts.ElementFlags.Optional) def.optional = true
+    elements.push(def)
+  })
+
+  return rest ? { kind: 'tuple', syntax, elements, rest } : { kind: 'tuple', syntax, elements }
 }

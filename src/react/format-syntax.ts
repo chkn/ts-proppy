@@ -33,9 +33,11 @@ export function typeSummary(type: PropType): string | null {
       return n === 0 ? '{}' : `${n} field${n === 1 ? '' : 's'}`
     }
     case 'array':
-      return `${shortSyntax(type.elementType.syntax, 28)}[]`
+      return `${shortSyntax(type.element.type.syntax, 28)}[]`
     case 'tuple':
-      return `tuple(${type.types.length})`
+      return `tuple(${type.elements.length}${type.rest ? '+' : ''})`
+    case 'record':
+      return `{ [key]: ${shortSyntax(type.value.type.syntax, 28)} }`
     default:
       return null
   }

@@ -2,7 +2,7 @@ import React from 'react'
 import type { ItemEditorProps } from '../types.js'
 import { valueToSourceText } from '../../editing/value-to-string.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
-import { controlStyle } from '../theme.js'
+import { controlStyle, monoFont } from '../theme.js'
 
 export function JsonFallbackEditor({ value, onChange, propDef, className, disabled }: ItemEditorProps) {
   const text = value ? valueToSourceText(value) : ''
@@ -18,7 +18,7 @@ export function JsonFallbackEditor({ value, onChange, propDef, className, disabl
       style={className ? undefined : {
         ...controlStyle,
         fontSize: 11,
-        fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+        fontFamily: monoFont,
         minHeight: 40,
         resize: 'vertical',
       }}

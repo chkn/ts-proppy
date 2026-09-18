@@ -1,6 +1,7 @@
 import ts from 'typescript'
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropType } from '../types/prop-type.js'
+import { slotDefinition } from '../types/prop-type.js'
 import type { PropValue, CalleeBinding, ImportSpecifier } from '../types/prop-value.js'
 import { TemplateValueBuilder } from '../types/template-value-builder.js'
 import { buildPropType } from './build-prop-type.js'
@@ -149,7 +150,7 @@ export function inferPropTypeFromExpression(
     const elementType: PropType = node.elements.length > 0
       ? inferPropTypeFromExpression(node.elements[0] as ts.Expression, sourceFile)
       : { kind: 'primitive', syntax: 'any' }
-    return { kind: 'array', syntax: `${elementType.syntax}[]`, elementType }
+    return { kind: 'array', syntax: `${elementType.syntax}[]`, element: slotDefinition(elementType) }
   }
   if (ts.isObjectLiteralExpression(node)) {
     const properties: PropDefinition[] = []
@@ -237,11 +238,25 @@ export function parseValueFromExpression(
     const properties: Record<string, PropValue> = {}
     for (const prop of node.properties) {
       if (ts.isPropertyAssignment(prop)) {
-        const key = prop.name.getText(sourceFile)
+        const key = propertyNameText(prop.name)
+        // A computed key can't be written back as data; keep the whole object.
+        if (key === undefined) return { kind: 'raw', sourceText: node.getText(sourceFile) }
         properties[key] = parseValueFromExpression(prop.initializer, sourceFile)
+      } else if (ts.isShorthandPropertyAssignment(prop) && !prop.objectAssignmentInitializer) {
+        properties[prop.name.text] = parseValueFromExpression(prop.name, sourceFile)
+      } else {
+        // Spreads, methods and accessors have no place in a property map, and
+        // dropping them would lose them on the next write.
+        return { kind: 'raw', sourceText: node.getText(sourceFile) }
       }
     }
     return { kind: 'object', properties }
+  }
+
+  // References to something in scope: `ticket`, `ticket.subject`, `ticket['id']`
+  const path = referencePath(node)
+  if (path && isParameterBound(node, path[0])) {
+    return { kind: 'reference', path }
   }
 
   // Call expressions → functionCall
@@ -304,6 +319,46 @@ export function parseValueFromExpression(
 
   // Fallback: raw source text
   return { kind: 'raw', sourceText: node.getText(sourceFile) }
+}
+
+/** A property name's text, or `undefined` for a computed name. */
+export function propertyNameText(name: ts.PropertyName): string | undefined {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name) || ts.isPrivateIdentifier(name)) {
+    return name.text
+  }
+  if (ts.isComputedPropertyName(name) && ts.isStringLiteralLike(name.expression)) return name.expression.text
+  return undefined
+}
+
+/**
+ * The path an identifier or property-access chain names — `['ticket']`,
+ * `['ticket', 'subject']` — or `undefined` for any other expression. Element
+ * access only counts with a string-literal key.
+ */
+function referencePath(node: ts.Expression): string[] | undefined {
+  if (ts.isIdentifier(node)) return node.text === 'undefined' ? undefined : [node.text]
+  if (ts.isParenthesizedExpression(node)) return undefined
+  if (ts.isPropertyAccessExpression(node) && !node.questionDotToken && ts.isIdentifier(node.name)) {
+    const head = referencePath(node.expression)
+    return head && [...head, node.name.text]
+  }
+  if (ts.isElementAccessExpression(node) && !node.questionDotToken && ts.isStringLiteralLike(node.argumentExpression)) {
+    const head = referencePath(node.expression)
+    return head && [...head, node.argumentExpression.text]
+  }
+  return undefined
+}
+
+/**
+ * Whether `name`, used at `node`, is a parameter of an enclosing function
+ * (destructured or not) — the values a prompt or component is given, and so
+ * the only identifiers an editor can offer in its place.
+ */
+function isParameterBound(node: ts.Node, name: string): boolean {
+  for (let cur: ts.Node | undefined = node.parent; cur; cur = cur.parent) {
+    if (isFunctionLike(cur) && cur.parameters.some(p => parameterBindsName(p, name))) return true
+  }
+  return false
 }
 
 function findImportForIdentifier(

@@ -69,9 +69,12 @@ export const labelStyle: CSSProperties = {
   color: colors.textPrimary,
 };
 
+/** The monospace stack every editor uses for source-ish text. */
+export const monoFont = 'ui-monospace, "SF Mono", Menlo, monospace';
+
 export const typeBadgeStyle: CSSProperties = {
   fontWeight: 400,
-  fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+  fontFamily: monoFont,
   fontSize: 11,
   color: colors.textMuted,
   marginLeft: 6,

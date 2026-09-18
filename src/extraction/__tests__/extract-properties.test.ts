@@ -88,8 +88,8 @@ export default (props: Props) => <div>Complex</div>
     expect(result.definitions[0].name).toBe('items')
     expect(result.definitions[0].type.kind).toBe('array')
     if (result.definitions[0].type.kind === 'array') {
-      expect(result.definitions[0].type.elementType.kind).toBe('primitive')
-      expect(result.definitions[0].type.elementType.syntax).toBe('string')
+      expect(result.definitions[0].type.element.type.kind).toBe('primitive')
+      expect(result.definitions[0].type.element.type.syntax).toBe('string')
     }
 
     expect(result.definitions[1].name).toBe('callback')
@@ -320,12 +320,12 @@ export default ({ items }: Props) => <div>{items}</div>
 
     expect(result.definitions[0].type.kind).toBe('array')
     if (result.definitions[0].type.kind === 'array') {
-      expect(result.definitions[0].type.elementType.syntax).toBe('string')
+      expect(result.definitions[0].type.element.type.syntax).toBe('string')
     }
 
     expect(result.definitions[2].type.kind).toBe('array')
     if (result.definitions[2].type.kind === 'array') {
-      expect(result.definitions[2].type.elementType.kind).toBe('object')
+      expect(result.definitions[2].type.element.type.kind).toBe('object')
     }
   })
 
@@ -340,13 +340,13 @@ export default ({ coordinate }: Props) => <div>{coordinate}</div>
 
     expect(result.definitions[0].type.kind).toBe('tuple')
     if (result.definitions[0].type.kind === 'tuple') {
-      expect(result.definitions[0].type.types).toHaveLength(2)
-      expect(result.definitions[0].type.types[0].syntax).toBe('number')
+      expect(result.definitions[0].type.elements).toHaveLength(2)
+      expect(result.definitions[0].type.elements[0].type.syntax).toBe('number')
     }
 
     expect(result.definitions[1].type.kind).toBe('tuple')
     if (result.definitions[1].type.kind === 'tuple') {
-      expect(result.definitions[1].type.types).toHaveLength(3)
+      expect(result.definitions[1].type.elements).toHaveLength(3)
     }
   })
 

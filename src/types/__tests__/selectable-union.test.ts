@@ -14,7 +14,7 @@ const obj: PropType = {
   syntax: '{ id: string }',
   properties: [{ name: 'id', type: str, optional: false }],
 }
-const arr: PropType = { kind: 'array', syntax: 'string[]', elementType: str }
+const arr: PropType = { kind: 'array', syntax: 'string[]', element: { name: '', type: str, optional: false } }
 
 function union(...types: PropType[]): PropType {
   return { kind: 'union', syntax: types.map(t => t.syntax).join(' | '), types }

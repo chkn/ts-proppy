@@ -1,4 +1,5 @@
-import type { PropType } from "../../types/prop-type.js";
+import { defaultValueForType } from "../../types/default-value.js";
+import type { PropDefinition } from "../../types/prop-definition.js";
 import type { PropValue } from "../../types/prop-value.js";
 import { isComplexPropType } from "../complex-type.js";
 import { ItemEditor } from "../ItemEditor.js";
@@ -12,7 +13,8 @@ import {
 import type { EditorPlugin, SlotPath } from "../types.js";
 
 interface ArrayEditorProps {
-  elementType: PropType;
+  /** The definition every element is edited against. */
+  element: PropDefinition;
   value: PropValue | undefined;
   onChange: (value: PropValue) => void;
   plugins?: EditorPlugin[];
@@ -21,7 +23,7 @@ interface ArrayEditorProps {
 }
 
 export function ArrayEditor({
-  elementType,
+  element,
   value,
   onChange,
   plugins,
@@ -33,7 +35,10 @@ export function ArrayEditor({
   const addItem = () => {
     onChange({
       kind: "array",
-      elements: [...elements, { kind: "primitive", value: "" }],
+      elements: [
+        ...elements,
+        element.defaultValue ?? defaultValueForType(element.type),
+      ],
     });
   };
 
@@ -50,12 +55,10 @@ export function ArrayEditor({
     onChange({ kind: "array", elements: newElements });
   };
 
-  const elementPropDef = { name: "", type: elementType, optional: false };
-
   // A complex element (object, tuple, ...) renders its own PropRow header
   // above its actual controls, so the row's flex-start top lands on that
   // label rather than on anything editable. Nudge the button down past it.
-  const removeButtonOffset = isComplexPropType(elementType)
+  const removeButtonOffset = isComplexPropType(element.type)
     ? rowHeaderHeight
     : 0;
 
@@ -71,7 +74,7 @@ export function ArrayEditor({
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <ItemEditor
-              propDef={elementPropDef}
+              propDef={element}
               value={item}
               onChange={newValue => updateItem(index, newValue)}
               plugins={plugins}

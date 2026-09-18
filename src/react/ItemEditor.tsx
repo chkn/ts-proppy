@@ -18,6 +18,13 @@ import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
 import { UnionMemberEditor } from './editors/UnionMemberEditor.js'
 import { TemplateEditor } from './editors/TemplateEditor.js'
 import { OpaqueEditor } from './editors/OpaqueEditor.js'
+import { RecordEditor } from './editors/RecordEditor.js'
+import { CatalogEditor } from './editors/CatalogEditor.js'
+import { ComboboxEditor } from './editors/ComboboxEditor.js'
+import { getOpenStringUnionInfo } from '../types/open-string-union.js'
+import { InterpolatablesContext, useInterpolatables } from './interpolatables-context.js'
+import { ParameterMenu, ReferenceEditor } from './editors/ReferenceEditor.js'
+import { defaultValueForType } from '../types/default-value.js'
 import type { PropType } from '../types/prop-type.js'
 
 /**
@@ -46,7 +53,73 @@ interface ItemEditorInternalProps {
 
 const ROOT_PATH: SlotPath = []
 
-export function ItemEditor({ value, onChange, propDef, plugins, className, path = ROOT_PATH, disabled }: ItemEditorInternalProps) {
+export function ItemEditor(props: ItemEditorInternalProps) {
+  const inherited = useInterpolatables()
+  const own = props.propDef.interpolatables
+  const interpolatables = own ?? inherited
+  const propDef = interpolatables === own ? props.propDef : { ...props.propDef, interpolatables }
+  const editor = <RoutedEditor {...props} propDef={propDef} />
+  // A definition that declares its own interpolatables scopes them to
+  // everything beneath it, however deep the container editors nest.
+  return own && own !== inherited ? (
+    <InterpolatablesContext.Provider value={own}>{editor}</InterpolatablesContext.Provider>
+  ) : (
+    editor
+  )
+}
+
+/**
+ * Whether a slot of `type` is offered a parameter reference beside its own
+ * editor. Strings already take `${…}` in their template editor, and a number,
+ * boolean or choice of constants is rarely worth one; structured slots are
+ * where a whole value tends to come from a parameter.
+ */
+function offersReference(type: PropType): boolean {
+  switch (type.kind) {
+    case 'object':
+    case 'record':
+    case 'array':
+    case 'tuple':
+    case 'opaque':
+      return true
+    case 'union':
+      // A union that takes text already takes `${…}` in its text editor.
+      return !type.types.every(t => t.kind === 'constant') && !type.types.some(t => primitiveBase(t) === 'string')
+    case 'primitive':
+      return !['string', 'number', 'boolean'].includes(primitiveBase(type) ?? '') && type.syntax !== 'Date'
+    default:
+      return false
+  }
+}
+
+function RoutedEditor(props: ItemEditorInternalProps) {
+  const { value, onChange, propDef, disabled } = props
+  const interpolatables = propDef.interpolatables
+
+  if (value?.kind === 'reference') {
+    return (
+      <ReferenceEditor
+        path={value.path}
+        interpolatables={interpolatables ?? []}
+        onChange={onChange}
+        onClear={() => onChange(propDef.defaultValue ?? defaultValueForType(propDef.type))}
+        disabled={disabled}
+      />
+    )
+  }
+
+  const editor = <SlotEditor {...props} />
+  // A slot with catalogs has its own menu of values to choose from.
+  if (!interpolatables?.length || propDef.catalogs?.length || !offersReference(propDef.type)) return editor
+  return (
+    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>{editor}</div>
+      <ParameterMenu interpolatables={interpolatables} onChange={onChange} disabled={disabled} />
+    </div>
+  )
+}
+
+function SlotEditor({ value, onChange, propDef, plugins, className, path = ROOT_PATH, disabled }: ItemEditorInternalProps) {
   const { type } = propDef
 
   // Check plugins first
@@ -57,6 +130,11 @@ export function ItemEditor({ value, onChange, propDef, plugins, className, path 
         return <PluginComponent propDef={propDef} value={value} onChange={onChange} path={path} disabled={disabled} />
       }
     }
+  }
+
+  // Slots with catalogs: ready-made values and factories beside the slot's own editing
+  if (propDef.catalogs?.length) {
+    return <CatalogEditor propDef={propDef} value={value} onChange={onChange} plugins={plugins} className={className} path={path} disabled={disabled} />
   }
 
   // Template values, or string properties with interpolatables available
@@ -71,12 +149,23 @@ export function ItemEditor({ value, onChange, propDef, plugins, className, path 
 
   // Array types
   if (type.kind === 'array') {
-    return <ArrayEditor elementType={type.elementType} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+    return <ArrayEditor element={type.element} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
   }
 
   // Tuple types
   if (type.kind === 'tuple') {
-    return <TupleEditor types={type.types} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+    return <TupleEditor elements={type.elements} rest={type.rest} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+  }
+
+  // Records: keys chosen by the user
+  if (type.kind === 'record') {
+    return <RecordEditor value={type.value} current={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+  }
+
+  // Open string unions: free text, with the known values as suggestions
+  const openUnion = getOpenStringUnionInfo(type)
+  if (openUnion) {
+    return <ComboboxEditor propDef={propDef} unionInfo={openUnion} value={value} onChange={onChange} className={className} disabled={disabled} />
   }
 
   // Discriminated unions

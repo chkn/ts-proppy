@@ -22,11 +22,28 @@ export type PropValue =
   } &
   ( { kind: 'primitive'; value: string | number | boolean | null | undefined }
   | { kind: 'template'; value: TemplateValue }
-  | { kind: 'functionCall'; callee: string; args: PropValue[]; binding?: CalleeBinding }
+  | {
+      kind: 'functionCall'
+      callee: string
+      args: PropValue[]
+      /**
+       * Where the callee comes from. A list is a set of *candidates*, in
+       * order of preference, for a value that hasn't been placed in a file
+       * yet (a catalog preset, say): `resolveBindings` picks the one
+       * that fits the file it is written into.
+       */
+      binding?: CalleeBinding | CalleeBinding[]
+    }
   | { kind: 'lambda'; parameters: string[]; body: string }
   | { kind: 'object'; properties: Record<string, PropValue> }
   | { kind: 'array'; elements: PropValue[] }
   | { kind: 'tuple'; elements: PropValue[] }
+  /**
+   * The value of something in scope — a function parameter, or a path into one
+   * (`ticket`, `ticket.subject`) — rather than a literal. Written as that
+   * expression, or as a shorthand property (`{ ticket }`) when the key matches.
+   */
+  | { kind: 'reference'; path: string[] }
   | { kind: 'raw'; sourceText: string } )
 
 export interface ImportSpecifier {

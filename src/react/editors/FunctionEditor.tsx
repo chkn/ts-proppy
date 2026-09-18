@@ -1,7 +1,7 @@
 import React from 'react'
 import type { ItemEditorProps } from '../types.js'
 import { defaultPlaceholder } from '../default-placeholder.js'
-import { colors, controlStyle, radius } from '../theme.js'
+import { colors, controlStyle, monoFont, radius } from '../theme.js'
 
 export function FunctionEditor({ value, onChange, propDef, disabled }: ItemEditorProps) {
   const parameters = propDef.type.kind === 'function' ? propDef.type.parameters : []
@@ -16,7 +16,7 @@ export function FunctionEditor({ value, onChange, propDef, disabled }: ItemEdito
     <div>
       <div style={{
         fontSize: 11,
-        fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+        fontFamily: monoFont,
         color: colors.textSecondary,
         marginBottom: 4,
         padding: '4px 8px',
@@ -39,7 +39,7 @@ export function FunctionEditor({ value, onChange, propDef, disabled }: ItemEdito
           ...controlStyle,
           padding: '6px 8px',
           borderRadius: radius.md,
-          fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace',
+          fontFamily: monoFont,
           minHeight: 60,
           resize: 'vertical',
         }}

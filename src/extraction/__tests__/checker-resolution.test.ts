@@ -64,9 +64,9 @@ export function orchestrate(threadMsgs: readonly Pick<ThreadMessage, 'excerpt'>[
     // Original source text is preserved for display.
     expect(type.syntax).toBe(`readonly Pick<ThreadMessage, 'excerpt'>[]`)
 
-    expect(type.elementType.kind).toBe('object')
-    if (type.elementType.kind !== 'object') return
-    expect(type.elementType.properties).toEqual([
+    expect(type.element.type.kind).toBe('object')
+    if (type.element.type.kind !== 'object') return
+    expect(type.element.type.properties).toEqual([
       {
         name: 'excerpt',
         type: { kind: 'primitive', syntax: 'string', base: 'string' },

@@ -7,8 +7,9 @@ import { PropRow } from './PropRow.js'
 import { RichEditor } from './RichEditor.js'
 import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
 import { buttonStyle, colors } from './theme.js'
+import { InterpolatablesContext } from './interpolatables-context.js'
 
-export function PropsEditor({ props, onChange, plugins, disabled }: PropsEditorProps) {
+export function PropsEditor({ props, onChange, plugins, disabled, interpolatables }: PropsEditorProps) {
   const [jsonMode, setJsonMode] = useState<Record<string, boolean>>({})
 
   const toggleJsonMode = (propName: string) => {
@@ -22,58 +23,60 @@ export function PropsEditor({ props, onChange, plugins, disabled }: PropsEditorP
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {definitions.map(propDef => {
-        const isComplex = isComplexPropType(propDef.type)
-        const isJson = jsonMode[propDef.name]
-        const currentValue = values?.[propDef.name]
+    <InterpolatablesContext.Provider value={interpolatables}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {definitions.map(propDef => {
+          const isComplex = isComplexPropType(propDef.type)
+          const isJson = jsonMode[propDef.name]
+          const currentValue = values?.[propDef.name]
 
-        const editor = !isComplex ? (
-          <ItemEditor
-            propDef={propDef}
-            value={currentValue}
-            onChange={(value: PropValue) => onChange(propDef.name, value)}
-            plugins={plugins}
-            path={[propDef.name]}
-            disabled={disabled}
-          />
-        ) : isJson ? (
-          <JsonFallbackEditor
-            propDef={propDef}
-            value={currentValue}
-            onChange={(value: PropValue) => onChange(propDef.name, value)}
-            disabled={disabled}
-          />
-        ) : (
-          <RichEditor
-            propType={propDef.type}
-            value={currentValue}
-            onChange={(value: PropValue) => onChange(propDef.name, value)}
-            plugins={plugins}
-            path={[propDef.name]}
-            disabled={disabled}
-          />
-        )
+          const editor = !isComplex ? (
+            <ItemEditor
+              propDef={propDef}
+              value={currentValue}
+              onChange={(value: PropValue) => onChange(propDef.name, value)}
+              plugins={plugins}
+              path={[propDef.name]}
+              disabled={disabled}
+            />
+          ) : isJson ? (
+            <JsonFallbackEditor
+              propDef={propDef}
+              value={currentValue}
+              onChange={(value: PropValue) => onChange(propDef.name, value)}
+              disabled={disabled}
+            />
+          ) : (
+            <RichEditor
+              propType={propDef.type}
+              value={currentValue}
+              onChange={(value: PropValue) => onChange(propDef.name, value)}
+              plugins={plugins}
+              path={[propDef.name]}
+              disabled={disabled}
+            />
+          )
 
-        return (
-          <PropRow
-            key={propDef.name}
-            name={propDef.name}
-            type={propDef.type}
-            optional={propDef.optional}
-            description={propDef.description}
-            actions={
-              isComplex && (
-                <button type="button" onClick={() => toggleJsonMode(propDef.name)} style={buttonStyle}>
-                  {isJson ? 'Rich Editor' : 'JSON'}
-                </button>
-              )
-            }
-          >
-            {editor}
-          </PropRow>
-        )
-      })}
-    </div>
+          return (
+            <PropRow
+              key={propDef.name}
+              name={propDef.name}
+              type={propDef.type}
+              optional={propDef.optional}
+              description={propDef.description}
+              actions={
+                isComplex && (
+                  <button type="button" onClick={() => toggleJsonMode(propDef.name)} style={buttonStyle}>
+                    {isJson ? 'Rich Editor' : 'JSON'}
+                  </button>
+                )
+              }
+            >
+              {editor}
+            </PropRow>
+          )
+        })}
+      </div>
+    </InterpolatablesContext.Provider>
   )
 }

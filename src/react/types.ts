@@ -1,5 +1,5 @@
 import type { ExtractedProps } from '../types/extracted-props.js'
-import type { PropDefinition } from '../types/prop-definition.js'
+import type { InterpolatableIdentifier, PropDefinition } from '../types/prop-definition.js'
 import type { PropType } from '../types/prop-type.js'
 import type { PropValue } from '../types/prop-value.js'
 
@@ -8,6 +8,11 @@ export interface PropsEditorProps {
   onChange: (name: string, value: PropValue) => void
   /** Custom editor plugins (checked before built-in editors) */
   plugins?: EditorPlugin[]
+  /**
+   * Identifiers available for `${…}` interpolation in every string slot, at
+   * any depth. See {@link useInterpolatables}.
+   */
+  interpolatables?: InterpolatableIdentifier[]
   /**
    * Renders every field read-only: focusable and selectable, so a shown
    * value can still be read and copied, but not changed. A container

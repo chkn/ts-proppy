@@ -87,7 +87,7 @@ describe('extractDefinitionsFromParameters', () => {
     expect(result[0].name).toBe('names')
     expect(result[0].type.kind).toBe('array')
     if (result[0].type.kind === 'array') {
-      expect(result[0].type.elementType).toEqual({ kind: 'primitive', syntax: 'string' })
+      expect(result[0].type.element).toEqual({ name: '', type: { kind: 'primitive', syntax: 'string' }, optional: false })
     }
   })
 
@@ -96,7 +96,7 @@ describe('extractDefinitionsFromParameters', () => {
     expect(result).toHaveLength(1)
     expect(result[0].type.kind).toBe('array')
     if (result[0].type.kind === 'array') {
-      expect(result[0].type.elementType).toEqual({ kind: 'primitive', syntax: 'string' })
+      expect(result[0].type.element).toEqual({ name: '', type: { kind: 'primitive', syntax: 'string' }, optional: false })
     }
   })
 
@@ -106,9 +106,9 @@ describe('extractDefinitionsFromParameters', () => {
     )
     expect(result[0].type.kind).toBe('array')
     if (result[0].type.kind === 'array') {
-      expect(result[0].type.elementType.kind).toBe('object')
-      if (result[0].type.elementType.kind === 'object') {
-        expect(result[0].type.elementType.properties).toEqual([
+      expect(result[0].type.element.type.kind).toBe('object')
+      if (result[0].type.element.type.kind === 'object') {
+        expect(result[0].type.element.type.properties).toEqual([
           { name: 'id', type: { kind: 'primitive', syntax: 'number' }, optional: false },
           { name: 'label', type: { kind: 'primitive', syntax: 'string' }, optional: false },
         ])
@@ -131,10 +131,11 @@ function render(root: Node) {}`
     const result = extractFromFunction(`function greet(pair: readonly [string, number]) {}`)
     expect(result[0].type.kind).toBe('tuple')
     if (result[0].type.kind === 'tuple') {
-      expect(result[0].type.types).toEqual([
-        { kind: 'primitive', syntax: 'string' },
-        { kind: 'primitive', syntax: 'number' },
+      expect(result[0].type.elements).toEqual([
+        { name: '[0]', type: { kind: 'primitive', syntax: 'string' }, optional: false },
+        { name: '[1]', type: { kind: 'primitive', syntax: 'number' }, optional: false },
       ])
+      expect(result[0].type.rest).toBeUndefined()
     }
   })
 })

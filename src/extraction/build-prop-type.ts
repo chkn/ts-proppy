@@ -1,5 +1,7 @@
 import ts from 'typescript'
-import type { PropType } from '../types/prop-type.js'
+import type { PrimitiveBase, PropType } from '../types/prop-type.js'
+import type { PropDefinition } from '../types/prop-definition.js'
+import { slotDefinition } from '../types/prop-type.js'
 import { findTypeDeclaration } from './helpers.js'
 import { extractDefinitionsFromDeclaration, extractDefinitionsFromTypeNode } from './extract-properties.js'
 import { buildPropTypeFromType, isOpaqueType } from './build-prop-type-from-type.js'
@@ -53,10 +55,23 @@ export function buildPropType(
     return { kind: 'constant', syntax, value: undefined }
   }
 
+  // `(T)` — parentheses are only grouping, so they shouldn't hide the shape
+  // inside (`(string & {})` in an open string union, say).
+  if (ts.isParenthesizedTypeNode(typeNode)) {
+    return { ...buildPropType(typeNode.type, sourceFile, typeChecker), syntax }
+  }
+
   // Tuple types
   if (ts.isTupleTypeNode(typeNode)) {
-    const types = typeNode.elements.map(el => buildPropType(el, sourceFile, typeChecker))
-    return { kind: 'tuple', syntax, types }
+    return buildTupleFromNode(typeNode, syntax, sourceFile, typeChecker)
+  }
+
+  // `T & { __brand }` / `string & {}`: an intersection over a primitive keyword
+  // is edited as that primitive. (With a checker, the resolved type says the
+  // same thing; this covers the checker-less path.)
+  if (ts.isIntersectionTypeNode(typeNode)) {
+    const base = typeNode.types.map(primitiveKeywordBase).find(b => b !== undefined)
+    if (base) return { kind: 'primitive', syntax, base }
   }
 
   // Union types
@@ -68,7 +83,7 @@ export function buildPropType(
   // Array types
   if (ts.isArrayTypeNode(typeNode)) {
     const elementType = buildPropType(typeNode.elementType, sourceFile, typeChecker)
-    return { kind: 'array', syntax, elementType }
+    return { kind: 'array', syntax, element: slotDefinition(elementType) }
   }
 
   // `readonly T[]` / `readonly [A, B]` — unwrap and recurse so the readonly
@@ -98,6 +113,8 @@ export function buildPropType(
   // Type literals (inline objects)
   if (ts.isTypeLiteralNode(typeNode)) {
     const properties = extractDefinitionsFromTypeNode(typeNode, sourceFile, typeChecker)
+    const record = properties.length === 0 && recordFromMembers(typeNode.members, sourceFile, typeChecker)
+    if (record) return { kind: 'record', syntax, value: record }
     return { kind: 'object', syntax, properties }
   }
 
@@ -105,13 +122,25 @@ export function buildPropType(
   if (ts.isTypeReferenceNode(typeNode)) {
     const typeName = typeNode.typeName.getText(sourceFile)
 
+    let typeDecl = findTypeDeclaration(sourceFile, typeName)
+
     // `ReadonlyArray<T>` — treat the same as `T[]`.
-    if (typeName === 'ReadonlyArray' && typeNode.typeArguments?.length === 1) {
+    if (!typeDecl && typeName === 'ReadonlyArray' && typeNode.typeArguments?.length === 1) {
       const elementType = buildPropType(typeNode.typeArguments[0], sourceFile, typeChecker)
-      return { kind: 'array', syntax, elementType }
+      return { kind: 'array', syntax, element: slotDefinition(elementType) }
     }
 
-    let typeDecl = findTypeDeclaration(sourceFile, typeName)
+    // `Record<string, T>` — a record, when `Record` is the global one.
+    if (
+      !typeDecl &&
+      typeName === 'Record' &&
+      typeNode.typeArguments?.length === 2 &&
+      typeNode.typeArguments[0].kind === ts.SyntaxKind.StringKeyword
+    ) {
+      const value = buildPropType(typeNode.typeArguments[1], sourceFile, typeChecker)
+      return { kind: 'record', syntax, value: slotDefinition(value) }
+    }
+
     let declSourceFile = sourceFile
 
     // If not found in same file and typeChecker available, resolve cross-file
@@ -140,6 +169,8 @@ export function buildPropType(
           if (properties.length > 0) {
             return { kind: 'object', syntax, properties }
           }
+          const record = !typeDecl.heritageClauses?.length && recordFromMembers(typeDecl.members, declSourceFile, typeChecker)
+          if (record) return { kind: 'record', syntax, value: record }
         }
       } finally {
         expanding.delete(typeDecl)
@@ -162,4 +193,91 @@ export function buildPropType(
 
   // Default: primitive
   return { kind: 'primitive', syntax }
+}
+
+/** The primitive a keyword type node names (`string`, `number`, …), if it is one. */
+function primitiveKeywordBase(node: ts.TypeNode): PrimitiveBase | undefined {
+  switch (node.kind) {
+    case ts.SyntaxKind.StringKeyword:
+      return 'string'
+    case ts.SyntaxKind.NumberKeyword:
+      return 'number'
+    case ts.SyntaxKind.BooleanKeyword:
+      return 'boolean'
+    case ts.SyntaxKind.BigIntKeyword:
+      return 'bigint'
+    case ts.SyntaxKind.SymbolKeyword:
+      return 'symbol'
+    default:
+      return undefined
+  }
+}
+
+/**
+ * The value definition of a type whose only members are a string index
+ * signature (`{ [name: string]: T }`), or `undefined` if it has any other
+ * member.
+ */
+function recordFromMembers(
+  members: ts.NodeArray<ts.TypeElement>,
+  sourceFile: ts.SourceFile,
+  typeChecker?: ts.TypeChecker
+): PropDefinition | undefined {
+  if (members.length !== 1) return undefined
+  const [member] = members
+  if (!ts.isIndexSignatureDeclaration(member) || !member.type) return undefined
+  const key = member.parameters[0]?.type
+  if (key?.kind !== ts.SyntaxKind.StringKeyword) return undefined
+  return slotDefinition(buildPropType(member.type, sourceFile, typeChecker))
+}
+
+/**
+ * A tuple type node's fixed elements and, for a variadic tuple
+ * (`[A, B, ...C[]]`), the definition of its rest elements. Named members
+ * (`[first: A, rest?: B]`) and optional elements (`[A, B?]`) are unwrapped.
+ */
+function buildTupleFromNode(
+  typeNode: ts.TupleTypeNode,
+  syntax: string,
+  sourceFile: ts.SourceFile,
+  typeChecker?: ts.TypeChecker
+): PropType {
+  const elements: PropDefinition[] = []
+  let rest: PropDefinition | undefined
+
+  for (const el of typeNode.elements) {
+    let node: ts.TypeNode = el
+    let optional = false
+    let spread = false
+    if (ts.isNamedTupleMember(node)) {
+      optional = !!node.questionToken
+      spread = !!node.dotDotDotToken
+      node = node.type
+    }
+    if (ts.isOptionalTypeNode(node)) {
+      optional = true
+      node = node.type
+    }
+    if (ts.isRestTypeNode(node)) {
+      spread = true
+      node = node.type
+    }
+
+    if (spread) {
+      if (rest) break
+      // `...T[]` spreads elements of `T`; anything else (`...Items`) is kept
+      // whole, since the syntax tree alone can't say what it spreads.
+      let elementNode = node
+      if (ts.isArrayTypeNode(elementNode)) elementNode = elementNode.elementType
+      rest = slotDefinition(buildPropType(elementNode, sourceFile, typeChecker), '[...]')
+      continue
+    }
+    if (rest) break
+
+    const def = slotDefinition(buildPropType(node, sourceFile, typeChecker), `[${elements.length}]`)
+    if (optional) def.optional = true
+    elements.push(def)
+  }
+
+  return rest ? { kind: 'tuple', syntax, elements, rest } : { kind: 'tuple', syntax, elements }
 }

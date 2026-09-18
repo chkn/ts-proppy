@@ -2,7 +2,7 @@ import ts from 'typescript'
 import type { PropDefinition } from '../types/prop-definition.js'
 import type { PropValue } from '../types/prop-value.js'
 import type { ExtractedProps, InsertionPoint } from '../types/extracted-props.js'
-import { parseValueFromExpression, inferPropTypeFromExpression } from './helpers.js'
+import { parseValueFromExpression, inferPropTypeFromExpression, propertyNameText } from './helpers.js'
 
 /**
  * Extract properties with their current values from an object literal expression.
@@ -30,7 +30,7 @@ export function extractPropertiesFromObjectLiteral(
 
   for (const prop of objectLiteral.properties) {
     if (!ts.isPropertyAssignment(prop)) continue
-    const name = prop.name.getText(sourceFile)
+    const name = propertyNameText(prop.name) ?? prop.name.getText(sourceFile)
 
     // Parse the value
     values[name] = parseValueFromExpression(prop.initializer, sourceFile)

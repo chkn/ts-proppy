@@ -46,9 +46,18 @@ export function valueToSourceText(value: PropValue): string {
     case 'object': {
       const entries = Object.entries(value.properties)
       if (entries.length === 0) return '{}'
-      const props = entries.map(([k, v]) => `${k}: ${valueToSourceText(v)}`).join(', ')
+      const props = entries
+        .map(([k, v]) => {
+          // `{ ticket }` rather than `{ ticket: ticket }`.
+          if (v.kind === 'reference' && v.path.length === 1 && v.path[0] === k && isIdentifier(k)) return k
+          return `${propertyKeyToSource(k)}: ${valueToSourceText(v)}`
+        })
+        .join(', ')
       return `{ ${props} }`
     }
+
+    case 'reference':
+      return referenceToSource(value.path)
 
     case 'array':
     case 'tuple': {
@@ -67,7 +76,9 @@ export function collectImports(value: PropValue): ImportSpecifier[] {
 
   function walk(v: PropValue) {
     if (v.kind === 'functionCall') {
-      if (v.binding?.kind === 'import') imports.push(v.binding.spec)
+      // A list of candidates hasn't been resolved against a file yet (see
+      // `resolveBindings`), so there is no one import to add.
+      if (!Array.isArray(v.binding) && v.binding?.kind === 'import') imports.push(v.binding.spec)
       v.args.forEach(walk)
     } else if (v.kind === 'object') {
       Object.values(v.properties).forEach(walk)
@@ -78,4 +89,22 @@ export function collectImports(value: PropValue): ImportSpecifier[] {
 
   walk(value)
   return imports
+}
+
+const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+
+function isIdentifier(text: string): boolean {
+  return IDENTIFIER.test(text)
+}
+
+/** An object key as source: bare when it's an identifier, quoted otherwise. */
+export function propertyKeyToSource(key: string): string {
+  return isIdentifier(key) ? key : JSON.stringify(key)
+}
+
+/** A reference path as source: `a.b`, with bracket access for non-identifier segments. */
+export function referenceToSource(path: readonly string[]): string {
+  return path
+    .map((segment, i) => (i === 0 ? segment : isIdentifier(segment) ? `.${segment}` : `[${JSON.stringify(segment)}]`))
+    .join('')
 }

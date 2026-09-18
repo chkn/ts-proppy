@@ -33,11 +33,13 @@ export function getSelectableUnionInfo(propType: PropType): SelectableUnionInfo 
 function accepts(member: PropType, value: PropValue): boolean {
   switch (member.kind) {
     case 'object':
+    case 'record':
       return value.kind === 'object'
     case 'array':
       return value.kind === 'array'
     case 'tuple':
-      return value.kind === 'tuple'
+      // A tuple literal in source parses as an array value.
+      return value.kind === 'tuple' || value.kind === 'array'
     case 'function':
       return value.kind === 'lambda' || value.kind === 'functionCall'
     case 'primitive': {
