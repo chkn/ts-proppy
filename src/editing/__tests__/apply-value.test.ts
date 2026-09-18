@@ -1,186 +1,254 @@
-import { describe, test, expect } from 'vitest'
-import ts from 'typescript'
-import { updateProperty, addProperty, removeProperty } from '../apply-value.js'
-import { extractPropertiesFromObjectLiteral } from '../../extraction/extract-values.js'
-import type { PropDefinition } from '../../types/prop-definition.js'
-import type { PropValue } from '../../types/prop-value.js'
+import ts from "typescript";
+import { describe, expect, test } from "vitest";
+import { extractPropertiesFromObjectLiteral } from "../../extraction/extract-values.js";
+import type { PropDefinition } from "../../types/prop-definition.js";
+import type { PropValue } from "../../types/prop-value.js";
+import { addProperty, removeProperty, updateProperty } from "../apply-value.js";
 
 function setupSource(source: string, defs: PropDefinition[]) {
-  const sourceFile = ts.createSourceFile('test.ts', source, ts.ScriptTarget.Latest, true)
-  let objLiteral: ts.ObjectLiteralExpression | undefined
+  const sourceFile = ts.createSourceFile(
+    "test.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  let objLiteral: ts.ObjectLiteralExpression | undefined;
   function visit(node: ts.Node) {
-    if (ts.isObjectLiteralExpression(node) && !objLiteral) objLiteral = node
-    ts.forEachChild(node, visit)
+    if (ts.isObjectLiteralExpression(node) && !objLiteral) objLiteral = node;
+    ts.forEachChild(node, visit);
   }
-  visit(sourceFile)
-  if (!objLiteral) throw new Error('No object literal found')
-  return extractPropertiesFromObjectLiteral(objLiteral, defs, sourceFile)
+  visit(sourceFile);
+  if (!objLiteral) throw new Error("No object literal found");
+  return extractPropertiesFromObjectLiteral(objLiteral, defs, sourceFile);
 }
 
-describe('updateProperty', () => {
-  test('replaces a string value', () => {
-    const source = `const x = { name: "Alice", age: 30 }`
+describe("updateProperty", () => {
+  test("replaces a string value", () => {
+    const source = `const x = { name: "Alice", age: 30 }`;
     const defs: PropDefinition[] = [
-      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
-      { name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const nameDef = extracted.definitions.find(d => d.name === 'name')!
-    const newValue: PropValue = { kind: 'primitive', value: 'Bob' }
+      {
+        name: "name",
+        type: { kind: "primitive", syntax: "string" },
+        optional: false,
+      },
+      {
+        name: "age",
+        type: { kind: "primitive", syntax: "number" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const nameDef = extracted.definitions.find(d => d.name === "name")!;
+    const newValue: PropValue = { kind: "primitive", value: "Bob" };
 
-    const result = updateProperty(source, nameDef, newValue)
-    expect(result).toContain('"Bob"')
-    expect(result).not.toContain('"Alice"')
-    expect(result).toContain('age: 30')
-  })
+    const result = updateProperty(source, nameDef, newValue);
+    expect(result).toContain('"Bob"');
+    expect(result).not.toContain('"Alice"');
+    expect(result).toContain("age: 30");
+  });
 
-  test('replaces with function call and adds import', () => {
-    const source = `const x = { model: "gpt-3" }`
+  test("replaces with function call and adds import", () => {
+    const source = `const x = { model: "gpt-3" }`;
     const defs: PropDefinition[] = [
-      { name: 'model', type: { kind: 'primitive', syntax: 'any' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const modelDef = extracted.definitions.find(d => d.name === 'model')!
+      {
+        name: "model",
+        type: { kind: "primitive", syntax: "any" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const modelDef = extracted.definitions.find(d => d.name === "model")!;
     const newValue: PropValue = {
-      kind: 'functionCall',
-      callee: 'openai',
-      args: [{ kind: 'primitive', value: 'gpt-4' }],
-      binding: { kind: 'import', spec: { name: 'openai', from: 'ai' } },
-    }
+      kind: "functionCall",
+      callee: "openai",
+      args: [{ kind: "primitive", value: "gpt-4" }],
+      binding: { kind: "import", spec: { name: "openai", from: "ai" } },
+    };
 
-    const result = updateProperty(source, modelDef, newValue)
-    expect(result).toContain('openai("gpt-4")')
-    expect(result).toContain("import { openai } from 'ai'")
-  })
-})
+    const result = updateProperty(source, modelDef, newValue);
+    expect(result).toContain('openai("gpt-4")');
+    expect(result).toContain("import { openai } from 'ai'");
+  });
+});
 
-describe('addProperty', () => {
-  test('adds a property to an object with existing properties', () => {
-    const source = `const x = { name: "Alice" }`
+describe("addProperty", () => {
+  test("adds a property to an object with existing properties", () => {
+    const source = `const x = { name: "Alice" }`;
     const defs: PropDefinition[] = [
-      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const newValue: PropValue = { kind: 'primitive', value: 30 }
+      {
+        name: "name",
+        type: { kind: "primitive", syntax: "string" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const newValue: PropValue = { kind: "primitive", value: 30 };
 
-    const result = addProperty(source, extracted, 'age', newValue)
-    expect(result).toContain('age: 30')
-    expect(result).toContain('name: "Alice"')
-  })
+    const result = addProperty(source, extracted, "age", newValue);
+    expect(result).toContain("age: 30");
+    expect(result).toContain('name: "Alice"');
+  });
 
-  test('inserts a comma after the last property when it has no trailing comma', () => {
-    const source = `const x = {\n  input: []\n}`
+  test("inserts a comma after the last property when it has no trailing comma", () => {
+    const source = `const x = {\n  input: []\n}`;
     const defs: PropDefinition[] = [
-      { name: 'input', type: { kind: 'primitive', syntax: 'any' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const newValue: PropValue = { kind: 'primitive', value: 'deep-research' }
+      {
+        name: "input",
+        type: { kind: "primitive", syntax: "any" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const newValue: PropValue = { kind: "primitive", value: "deep-research" };
 
-    const result = addProperty(source, extracted, 'agent', newValue)
-    expect(result).toContain('input: [],')
-    expect(result).toContain('agent: "deep-research"')
-  })
+    const result = addProperty(source, extracted, "agent", newValue);
+    expect(result).toContain("input: [],");
+    expect(result).toContain('agent: "deep-research"');
+  });
 
-  test('adds a property to an empty object', () => {
-    const source = `const x = {}`
-    const defs: PropDefinition[] = []
-    const extracted = setupSource(source, defs)
-    const newValue: PropValue = { kind: 'primitive', value: 'hello' }
+  test("adds a property to an empty object", () => {
+    const source = `const x = {}`;
+    const defs: PropDefinition[] = [];
+    const extracted = setupSource(source, defs);
+    const newValue: PropValue = { kind: "primitive", value: "hello" };
 
-    const result = addProperty(source, extracted, 'greeting', newValue)
-    expect(result).toContain('greeting: "hello"')
-  })
+    const result = addProperty(source, extracted, "greeting", newValue);
+    expect(result).toContain('greeting: "hello"');
+  });
 
-  test('adds a property to an empty object on a single line, increasing existing indent', () => {
-    const source = `  const x = {}`
-    const defs: PropDefinition[] = []
-    const extracted = setupSource(source, defs)
-    const newValue: PropValue = { kind: 'primitive', value: 'hello' }
+  test("adds a property to an empty object on a single line, increasing existing indent", () => {
+    const source = `  const x = {}`;
+    const defs: PropDefinition[] = [];
+    const extracted = setupSource(source, defs);
+    const newValue: PropValue = { kind: "primitive", value: "hello" };
 
-    const result = addProperty(source, extracted, 'greeting', newValue)
-    expect(result).toBe(`  const x = {\n    greeting: "hello",\n}`)
-  })
+    const result = addProperty(source, extracted, "greeting", newValue);
+    expect(result).toBe(`  const x = {\n    greeting: "hello",\n}`);
+  });
 
-  test.each(['const x = {}', 'const x = {\n}'])('adds a property to: %s', source => {
-    const defs: PropDefinition[] = []
-    const extracted = setupSource(source, defs)
-    const newValue: PropValue = { kind: 'primitive', value: 'hello' }
+  test.each(["const x = {}", "const x = {\n}"])(
+    "adds a property to: %s",
+    source => {
+      const defs: PropDefinition[] = [];
+      const extracted = setupSource(source, defs);
+      const newValue: PropValue = { kind: "primitive", value: "hello" };
 
-    const result = addProperty(source, extracted, 'greeting', newValue)
-    expect(result).toBe(`const x = {\n  greeting: "hello",\n}`)
-  })
+      const result = addProperty(source, extracted, "greeting", newValue);
+      expect(result).toBe(`const x = {\n  greeting: "hello",\n}`);
+    },
+  );
 
-  test('adds a property with an import to an empty object', () => {
-    const source = `const x = {}`
-    const defs: PropDefinition[] = []
-    const extracted = setupSource(source, defs)
+  test("adds a property with an import to an empty object", () => {
+    const source = `const x = {}`;
+    const defs: PropDefinition[] = [];
+    const extracted = setupSource(source, defs);
     const newValue: PropValue = {
-      kind: 'functionCall',
-      callee: 'openai',
-      args: [{ kind: 'primitive', value: 'gpt-4' }],
-      binding: { kind: 'import', spec: { name: 'openai', from: 'ai' } },
-    }
+      kind: "functionCall",
+      callee: "openai",
+      args: [{ kind: "primitive", value: "gpt-4" }],
+      binding: { kind: "import", spec: { name: "openai", from: "ai" } },
+    };
 
-    const result = addProperty(source, extracted, 'model', newValue)
-    expect(result).toContain('model: openai("gpt-4")')
-    expect(result).toContain("import { openai } from 'ai'")
-  })
-})
+    const result = addProperty(source, extracted, "model", newValue);
+    expect(result).toContain('model: openai("gpt-4")');
+    expect(result).toContain("import { openai } from 'ai'");
+  });
+});
 
-describe('removeProperty', () => {
-  test('removes a property using fullSpan', () => {
-    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`
+describe("removeProperty", () => {
+  test("removes a property using fullSpan", () => {
+    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`;
     const defs: PropDefinition[] = [
-      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
-      { name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const nameDef = extracted.definitions.find(d => d.name === 'name')!
+      {
+        name: "name",
+        type: { kind: "primitive", syntax: "string" },
+        optional: false,
+      },
+      {
+        name: "age",
+        type: { kind: "primitive", syntax: "number" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const nameDef = extracted.definitions.find(d => d.name === "name")!;
 
-    const result = removeProperty(source, nameDef)
-    expect(result).not.toContain('name')
-    expect(result).toContain('age: 30')
-  })
+    const result = removeProperty(source, nameDef);
+    expect(result).not.toContain("name");
+    expect(result).toContain("age: 30");
+  });
 
-  test('preserves newline before closing brace when removing the last property', () => {
-    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`
+  test("preserves newline before closing brace when removing the last property", () => {
+    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`;
     const defs: PropDefinition[] = [
-      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
-      { name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const ageDef = extracted.definitions.find(d => d.name === 'age')!
+      {
+        name: "name",
+        type: { kind: "primitive", syntax: "string" },
+        optional: false,
+      },
+      {
+        name: "age",
+        type: { kind: "primitive", syntax: "number" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const ageDef = extracted.definitions.find(d => d.name === "age")!;
 
-    const result = removeProperty(source, ageDef)
-    expect(result).toBe(`const x = {\n  name: "Alice",\n}`)
-  })
+    const result = removeProperty(source, ageDef);
+    expect(result).toBe(`const x = {\n  name: "Alice",\n}`);
+  });
 
-  test('preserves leading newline of next property when removing a non-last property', () => {
-    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`
+  test("preserves leading newline of next property when removing a non-last property", () => {
+    const source = `const x = {\n  name: "Alice",\n  age: 30\n}`;
     const defs: PropDefinition[] = [
-      { name: 'name', type: { kind: 'primitive', syntax: 'string' }, optional: false },
-      { name: 'age', type: { kind: 'primitive', syntax: 'number' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const nameDef = extracted.definitions.find(d => d.name === 'name')!
+      {
+        name: "name",
+        type: { kind: "primitive", syntax: "string" },
+        optional: false,
+      },
+      {
+        name: "age",
+        type: { kind: "primitive", syntax: "number" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const nameDef = extracted.definitions.find(d => d.name === "name")!;
 
-    const result = removeProperty(source, nameDef)
-    expect(result).toBe(`const x = {\n  age: 30\n}`)
-  })
+    const result = removeProperty(source, nameDef);
+    expect(result).toBe(`const x = {\n  age: 30\n}`);
+  });
 
-  test('add then remove round-trips back to original source (with trailing comma)', () => {
-    const source = `const x = {\n  messages: [{ role: 'user', content: 'Test 1' }],\n}`
+  test("add then remove round-trips back to original source (with trailing comma)", () => {
+    const source = `const x = {\n  messages: [{ role: 'user', content: 'Test 1' }],\n}`;
     const defs: PropDefinition[] = [
-      { name: 'messages', type: { kind: 'primitive', syntax: 'any' }, optional: false },
-    ]
-    const extracted = setupSource(source, defs)
-    const afterAdd = addProperty(source, extracted, 'temperature', { kind: 'primitive', value: 0 })
+      {
+        name: "messages",
+        type: { kind: "primitive", syntax: "any" },
+        optional: false,
+      },
+    ];
+    const extracted = setupSource(source, defs);
+    const afterAdd = addProperty(source, extracted, "temperature", {
+      kind: "primitive",
+      value: 0,
+    });
 
-    const allDefs = [...defs, { name: 'temperature', type: { kind: 'primitive', syntax: 'number' }, optional: false }]
-    const extractedAfterAdd = setupSource(afterAdd, allDefs)
-    const tempDef = extractedAfterAdd.definitions.find(d => d.name === 'temperature')!
-    const result = removeProperty(afterAdd, tempDef)
+    const allDefs = [
+      ...defs,
+      {
+        name: "temperature",
+        type: { kind: "primitive", syntax: "number" },
+        optional: false,
+      },
+    ];
+    const extractedAfterAdd = setupSource(afterAdd, allDefs);
+    const tempDef = extractedAfterAdd.definitions.find(
+      d => d.name === "temperature",
+    )!;
+    const result = removeProperty(afterAdd, tempDef);
 
-    expect(result).toBe(source)
-  })
-})
+    expect(result).toBe(source);
+  });
+});

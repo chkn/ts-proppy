@@ -1,15 +1,17 @@
-import React from 'react'
-import type { ItemEditorProps } from '../types.js'
-import type { PropDefinition } from '../../types/prop-definition.js'
-import type { PropType } from '../../types/prop-type.js'
-import type { PropValue } from '../../types/prop-value.js'
-import { controlStyle } from '../theme.js'
+import type { PropDefinition } from "../../types/prop-definition.js";
+import type { PropType } from "../../types/prop-type.js";
+import type { PropValue } from "../../types/prop-value.js";
+import { controlStyle } from "../theme.js";
+import type { ItemEditorProps } from "../types.js";
 
 function parseConstantUnion(propType: PropType): any[] {
-  if (propType.kind !== 'union') return []
+  if (propType.kind !== "union") return [];
   return propType.types
-    .filter((t): t is Extract<PropType, { kind: 'constant' }> => t.kind === 'constant')
-    .map(t => t.value)
+    .filter(
+      (t): t is Extract<PropType, { kind: "constant" }> =>
+        t.kind === "constant",
+    )
+    .map(t => t.value);
 }
 
 /**
@@ -21,30 +23,39 @@ function parseConstantUnion(propType: PropType): any[] {
  * that implied choice would never be one `onChange` actually reported.
  */
 export function constantUnionSelection(
-  propDef: Pick<PropDefinition, 'defaultValue'>,
+  propDef: Pick<PropDefinition, "defaultValue">,
   value: PropValue | undefined,
 ): string | undefined {
-  if (value?.kind === 'primitive') return String(value.value)
-  if (propDef.defaultValue?.kind === 'primitive') return String(propDef.defaultValue.value)
-  return undefined
+  if (value?.kind === "primitive") return String(value.value);
+  if (propDef.defaultValue?.kind === "primitive")
+    return String(propDef.defaultValue.value);
+  return undefined;
 }
 
-export function ConstantUnionEditor({ value, onChange, propDef, className, disabled }: ItemEditorProps) {
-  const options = parseConstantUnion(propDef.type)
-  const currentValue = constantUnionSelection(propDef, value)
+export function ConstantUnionEditor({
+  value,
+  onChange,
+  propDef,
+  className,
+  disabled,
+}: ItemEditorProps) {
+  const options = parseConstantUnion(propDef.type);
+  const currentValue = constantUnionSelection(propDef, value);
 
   return (
     <select
-      value={currentValue ?? ''}
-      onChange={(e) => onChange({ kind: 'primitive', value: e.target.value })}
+      value={currentValue ?? ""}
+      onChange={e => onChange({ kind: "primitive", value: e.target.value })}
       className={className}
       disabled={disabled}
       style={className ? undefined : controlStyle}
     >
       {currentValue === undefined && <option value="">-- Select --</option>}
       {options.map((option: any) => (
-        <option key={String(option)} value={String(option)}>{String(option)}</option>
+        <option key={String(option)} value={String(option)}>
+          {String(option)}
+        </option>
       ))}
     </select>
-  )
+  );
 }

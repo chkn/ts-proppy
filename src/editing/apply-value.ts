@@ -1,28 +1,35 @@
-import type { PropDefinition } from '../types/prop-definition.js'
-import type { PropValue } from '../types/prop-value.js'
-import type { ExtractedProps } from '../types/extracted-props.js'
-import { valueToSourceText, collectImports, propertyKeyToSource } from './value-to-string.js'
-import { ensureImport } from './ensure-import.js'
+import type { ExtractedProps } from "../types/extracted-props.js";
+import type { PropDefinition } from "../types/prop-definition.js";
+import type { PropValue } from "../types/prop-value.js";
+import { ensureImport } from "./ensure-import.js";
+import {
+  collectImports,
+  propertyKeyToSource,
+  valueToSourceText,
+} from "./value-to-string.js";
 
 /** Update an existing property value in source code */
 export function updateProperty(
   sourceCode: string,
   property: PropDefinition,
-  value: PropValue
+  value: PropValue,
 ): string {
   if (!property.valueSpan) {
-    throw new Error(`Property '${property.name}' is missing valueSpan`)
+    throw new Error(`Property '${property.name}' is missing valueSpan`);
   }
 
-  const newText = valueToSourceText(value)
-  let result = sourceCode.slice(0, property.valueSpan.start) + newText + sourceCode.slice(property.valueSpan.end)
+  const newText = valueToSourceText(value);
+  let result =
+    sourceCode.slice(0, property.valueSpan.start) +
+    newText +
+    sourceCode.slice(property.valueSpan.end);
 
   // Ensure any required imports
   for (const imp of collectImports(value)) {
-    result = ensureImport(result, imp)
+    result = ensureImport(result, imp);
   }
 
-  return result
+  return result;
 }
 
 /** Add a new property to an object literal in source code */
@@ -30,51 +37,61 @@ export function addProperty(
   sourceCode: string,
   extractedProps: ExtractedProps,
   propertyName: string,
-  value: PropValue
+  value: PropValue,
 ): string {
   if (!extractedProps.insertionPoint) {
-    throw new Error('ExtractedProps is missing insertionPoint')
+    throw new Error("ExtractedProps is missing insertionPoint");
   }
 
-  const { lastPropertyEnd, objectEnd, indent, hasProperties } = extractedProps.insertionPoint
-  const valueText = valueToSourceText(value)
+  const { lastPropertyEnd, objectEnd, indent, hasProperties } =
+    extractedProps.insertionPoint;
+  const valueText = valueToSourceText(value);
 
-  let result: string
+  let result: string;
   if (hasProperties) {
     // Insert after last property; add comma first if the last property has no trailing comma
-    const needsComma = sourceCode[lastPropertyEnd - 1] !== ','
-    const insertText = `${needsComma ? ',' : ''}\n${indent}${propertyKeyToSource(propertyName)}: ${valueText},`
-    result = sourceCode.slice(0, lastPropertyEnd) + insertText + sourceCode.slice(lastPropertyEnd)
+    const needsComma = sourceCode[lastPropertyEnd - 1] !== ",";
+    const insertText = `${needsComma ? "," : ""}\n${indent}${propertyKeyToSource(propertyName)}: ${valueText},`;
+    result =
+      sourceCode.slice(0, lastPropertyEnd) +
+      insertText +
+      sourceCode.slice(lastPropertyEnd);
   } else {
     // Empty object
-    let hasNewline = false
-    let insertText = `\n${indent}${propertyKeyToSource(propertyName)}: ${valueText},`
+    let hasNewline = false;
+    let insertText = `\n${indent}${propertyKeyToSource(propertyName)}: ${valueText},`;
     for (let i = lastPropertyEnd; i < objectEnd; i++) {
-      if (sourceCode[i] === '\n') {
-        hasNewline = true
-        break
+      if (sourceCode[i] === "\n") {
+        hasNewline = true;
+        break;
       }
     }
-    if (!hasNewline) insertText += '\n'
-    result = sourceCode.slice(0, lastPropertyEnd) + insertText + sourceCode.slice(lastPropertyEnd)
+    if (!hasNewline) insertText += "\n";
+    result =
+      sourceCode.slice(0, lastPropertyEnd) +
+      insertText +
+      sourceCode.slice(lastPropertyEnd);
   }
 
   // Ensure any required imports
   for (const imp of collectImports(value)) {
-    result = ensureImport(result, imp)
+    result = ensureImport(result, imp);
   }
 
-  return result
+  return result;
 }
 
 /** Remove a property from source code using its fullSpan */
 export function removeProperty(
   sourceCode: string,
-  property: PropDefinition
+  property: PropDefinition,
 ): string {
   if (!property.fullSpan) {
-    throw new Error(`Property '${property.name}' is missing fullSpan`)
+    throw new Error(`Property '${property.name}' is missing fullSpan`);
   }
 
-  return sourceCode.slice(0, property.fullSpan.start) + sourceCode.slice(property.fullSpan.end)
+  return (
+    sourceCode.slice(0, property.fullSpan.start) +
+    sourceCode.slice(property.fullSpan.end)
+  );
 }

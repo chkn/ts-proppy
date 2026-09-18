@@ -187,9 +187,9 @@ function CatalogPicker({
 
   // Follow the value into its catalog when it changes from outside.
   const valueKey = value ? JSON.stringify(value) : "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the serialized value only, so catalogs/propDef identity churn cannot fight the user's own selection while the menu is open.
   useEffect(() => {
     if (!open) setMode(activeCatalogIndex(catalogs, propDef, value));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valueKey]);
 
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type {
   DiscriminatedUnionCase,
   DiscriminatedUnionInfo,
@@ -50,6 +51,7 @@ export function DiscriminatedUnionEditor({
   path = [],
   disabled,
 }: DiscriminatedUnionEditorProps) {
+  const discriminatorId = useId();
   const { discriminator, cases } = discriminatedUnionInfo;
 
   const objProps: Record<string, PropValue> =
@@ -73,6 +75,7 @@ export function DiscriminatedUnionEditor({
     <div style={nestedGroupStyle}>
       <div>
         <label
+          htmlFor={discriminatorId}
           style={{
             display: "block",
             fontSize: 12,
@@ -84,6 +87,7 @@ export function DiscriminatedUnionEditor({
           {discriminator} *
         </label>
         <select
+          id={discriminatorId}
           value={discriminatorValue ?? ""}
           onChange={e => handleDiscriminatorChange(e.target.value)}
           style={controlStyle}

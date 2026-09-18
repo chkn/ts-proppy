@@ -1,9 +1,9 @@
-import { describe, test, expect } from 'vitest'
-import ts from 'typescript'
-import path from 'node:path'
-import { extractDefinitionsFromParameters } from '../extract-properties.js'
+import path from "node:path";
+import ts from "typescript";
+import { describe, expect, test } from "vitest";
+import { extractDefinitionsFromParameters } from "../extract-properties.js";
 
-const LIB_DIR = path.dirname(ts.getDefaultLibFilePath({}))
+const LIB_DIR = path.dirname(ts.getDefaultLibFilePath({}));
 
 /**
  * Build a program over `files` (virtual paths under `/proj`), falling back to
@@ -12,246 +12,278 @@ const LIB_DIR = path.dirname(ts.getDefaultLibFilePath({}))
 function programFrom(files: Record<string, string>, entry: string) {
   const host: ts.CompilerHost = {
     getSourceFile: (name, languageVersion) => {
-      const text = files[name] ?? (name.startsWith(LIB_DIR) ? ts.sys.readFile(name) : undefined)
-      return text === undefined ? undefined : ts.createSourceFile(name, text, languageVersion, true)
+      const text =
+        files[name] ??
+        (name.startsWith(LIB_DIR) ? ts.sys.readFile(name) : undefined);
+      return text === undefined
+        ? undefined
+        : ts.createSourceFile(name, text, languageVersion, true);
     },
     writeFile: () => {},
     getDefaultLibFileName: options => ts.getDefaultLibFilePath(options),
     useCaseSensitiveFileNames: () => true,
     getCanonicalFileName: f => f,
-    getCurrentDirectory: () => '/proj',
-    getNewLine: () => '\n',
+    getCurrentDirectory: () => "/proj",
+    getNewLine: () => "\n",
     fileExists: name => name in files || ts.sys.fileExists(name),
     readFile: name => files[name] ?? ts.sys.readFile(name),
-  }
-  const program = ts.createProgram([entry], { strict: true, target: ts.ScriptTarget.ES2022 }, host)
-  return { program, typeChecker: program.getTypeChecker(), sourceFile: program.getSourceFile(entry)! }
+  };
+  const program = ts.createProgram(
+    [entry],
+    { strict: true, target: ts.ScriptTarget.ES2022 },
+    host,
+  );
+  return {
+    program,
+    typeChecker: program.getTypeChecker(),
+    sourceFile: program.getSourceFile(entry)!,
+  };
 }
 
 function extractParams(files: Record<string, string>, entry: string) {
-  const { typeChecker, sourceFile } = programFrom(files, entry)
-  let fn: ts.FunctionDeclaration | undefined
+  const { typeChecker, sourceFile } = programFrom(files, entry);
+  let fn: ts.FunctionDeclaration | undefined;
   const visit = (node: ts.Node) => {
-    if (ts.isFunctionDeclaration(node) && node.name) fn = node
-    ts.forEachChild(node, visit)
-  }
-  visit(sourceFile)
-  if (!fn) throw new Error('No function declaration found')
-  return extractDefinitionsFromParameters(fn.parameters, sourceFile, typeChecker)
+    if (ts.isFunctionDeclaration(node) && node.name) fn = node;
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (!fn) throw new Error("No function declaration found");
+  return extractDefinitionsFromParameters(
+    fn.parameters,
+    sourceFile,
+    typeChecker,
+  );
 }
 
-describe('checker-backed type resolution', () => {
-  test('expands a readonly array of Pick<> over a cross-file interface', () => {
+describe("checker-backed type resolution", () => {
+  test("expands a readonly array of Pick<> over a cross-file interface", () => {
     const defs = extractParams(
       {
-        '/proj/types.ts': `export interface ThreadMessage {
+        "/proj/types.ts": `export interface ThreadMessage {
   /** Portion of the message relevant to this thread. */
   excerpt: string
   body: string
   sentAt: number
 }`,
-        '/proj/prompt.ts': `import type { ThreadMessage } from './types'
+        "/proj/prompt.ts": `import type { ThreadMessage } from './types'
 export function orchestrate(threadMsgs: readonly Pick<ThreadMessage, 'excerpt'>[]) {}`,
       },
-      '/proj/prompt.ts'
-    )
+      "/proj/prompt.ts",
+    );
 
-    expect(defs).toHaveLength(1)
-    const type = defs[0].type
-    expect(type.kind).toBe('array')
-    if (type.kind !== 'array') return
+    expect(defs).toHaveLength(1);
+    const type = defs[0].type;
+    expect(type.kind).toBe("array");
+    if (type.kind !== "array") return;
 
     // Original source text is preserved for display.
-    expect(type.syntax).toBe(`readonly Pick<ThreadMessage, 'excerpt'>[]`)
+    expect(type.syntax).toBe(`readonly Pick<ThreadMessage, 'excerpt'>[]`);
 
-    expect(type.element.type.kind).toBe('object')
-    if (type.element.type.kind !== 'object') return
+    expect(type.element.type.kind).toBe("object");
+    if (type.element.type.kind !== "object") return;
     expect(type.element.type.properties).toEqual([
       {
-        name: 'excerpt',
-        type: { kind: 'primitive', syntax: 'string', base: 'string' },
+        name: "excerpt",
+        type: { kind: "primitive", syntax: "string", base: "string" },
         optional: false,
-        description: 'Portion of the message relevant to this thread.',
+        description: "Portion of the message relevant to this thread.",
       },
-    ])
-  })
+    ]);
+  });
 
-  test('resolves a plain cross-file interface', () => {
+  test("resolves a plain cross-file interface", () => {
     const defs = extractParams(
       {
-        '/proj/types.ts': `export interface User { name: string; age?: number }`,
-        '/proj/prompt.ts': `import type { User } from './types'
+        "/proj/types.ts": `export interface User { name: string; age?: number }`,
+        "/proj/prompt.ts": `import type { User } from './types'
 export function greet(user: User) {}`,
       },
-      '/proj/prompt.ts'
-    )
+      "/proj/prompt.ts",
+    );
 
-    expect(defs[0].type.kind).toBe('object')
-    if (defs[0].type.kind !== 'object') return
+    expect(defs[0].type.kind).toBe("object");
+    if (defs[0].type.kind !== "object") return;
     expect(defs[0].type.properties).toEqual([
-      { name: 'name', type: { kind: 'primitive', syntax: 'string', base: 'string' }, optional: false },
-      { name: 'age', type: { kind: 'primitive', syntax: 'number', base: 'number' }, optional: true },
-    ])
-  })
+      {
+        name: "name",
+        type: { kind: "primitive", syntax: "string", base: "string" },
+        optional: false,
+      },
+      {
+        name: "age",
+        type: { kind: "primitive", syntax: "number", base: "number" },
+        optional: true,
+      },
+    ]);
+  });
 
-  test('surfaces a nullable member as a constant, like the syntax-tree path', () => {
+  test("surfaces a nullable member as a constant, like the syntax-tree path", () => {
     const defs = extractParams(
       {
-        '/proj/types.ts': `export interface Task { description: string | null }`,
-        '/proj/prompt.ts': `import type { Task } from './types'
+        "/proj/types.ts": `export interface Task { description: string | null }`,
+        "/proj/prompt.ts": `import type { Task } from './types'
 export function plan(task: Pick<Task, 'description'>) {}`,
       },
-      '/proj/prompt.ts'
-    )
+      "/proj/prompt.ts",
+    );
 
     // Resolved through Pick<>, so this can only come from the checker. `null`
     // has to land as a constant here too, or the same type would get a
     // different editor depending on how it was written.
-    expect(defs[0].type.kind).toBe('object')
-    if (defs[0].type.kind !== 'object') return
-    const description = defs[0].type.properties[0].type
-    expect(description.kind).toBe('union')
-    if (description.kind !== 'union') return
+    expect(defs[0].type.kind).toBe("object");
+    if (defs[0].type.kind !== "object") return;
+    const description = defs[0].type.properties[0].type;
+    expect(description.kind).toBe("union");
+    if (description.kind !== "union") return;
     // The checker decides the order of union members, so match on content.
     expect(description.types).toEqual(
       expect.arrayContaining([
-        { kind: 'primitive', syntax: 'string', base: 'string' },
-        { kind: 'constant', syntax: 'null', value: null },
-      ])
-    )
-    expect(description.types).toHaveLength(2)
-  })
+        { kind: "primitive", syntax: "string", base: "string" },
+        { kind: "constant", syntax: "null", value: null },
+      ]),
+    );
+    expect(description.types).toHaveLength(2);
+  });
 
-  test('expands Omit<> and Partial<>', () => {
+  test("expands Omit<> and Partial<>", () => {
     const defs = extractParams(
       {
-        '/proj/types.ts': `export interface User { name: string; age: number; secret: string }`,
-        '/proj/prompt.ts': `import type { User } from './types'
+        "/proj/types.ts": `export interface User { name: string; age: number; secret: string }`,
+        "/proj/prompt.ts": `import type { User } from './types'
 export function greet(a: Omit<User, 'secret'>, b: Partial<User>) {}`,
       },
-      '/proj/prompt.ts'
-    )
+      "/proj/prompt.ts",
+    );
 
-    expect(defs[0].type.kind).toBe('object')
-    if (defs[0].type.kind === 'object') {
-      expect(defs[0].type.properties.map(p => p.name)).toEqual(['name', 'age'])
+    expect(defs[0].type.kind).toBe("object");
+    if (defs[0].type.kind === "object") {
+      expect(defs[0].type.properties.map(p => p.name)).toEqual(["name", "age"]);
     }
-    expect(defs[1].type.kind).toBe('object')
-    if (defs[1].type.kind === 'object') {
-      expect(defs[1].type.properties.every(p => p.optional)).toBe(true)
+    expect(defs[1].type.kind).toBe("object");
+    if (defs[1].type.kind === "object") {
+      expect(defs[1].type.properties.every(p => p.optional)).toBe(true);
     }
-  })
+  });
 
-  test('leaves method-only library types opaque instead of expanding members', () => {
+  test("leaves method-only library types opaque instead of expanding members", () => {
     const defs = extractParams(
-      { '/proj/prompt.ts': `export function at(when: Date) {}` },
-      '/proj/prompt.ts'
-    )
-    expect(defs[0].type).toEqual({ kind: 'opaque', syntax: 'Date' })
-  })
+      { "/proj/prompt.ts": `export function at(when: Date) {}` },
+      "/proj/prompt.ts",
+    );
+    expect(defs[0].type).toEqual({ kind: "opaque", syntax: "Date" });
+  });
 
-  test('marks an all-method service interface opaque', () => {
+  test("marks an all-method service interface opaque", () => {
     const defs = extractParams(
       {
-        '/proj/rpc.ts': `export interface Inventory {
+        "/proj/rpc.ts": `export interface Inventory {
   list(): Promise<string[]>
   count: () => number
 }`,
-        '/proj/prompt.ts': `import type { Inventory } from './rpc'
+        "/proj/prompt.ts": `import type { Inventory } from './rpc'
 export function run(inv: Inventory) {}`,
       },
-      '/proj/prompt.ts'
-    )
-    expect(defs[0].type).toEqual({ kind: 'opaque', syntax: 'Inventory' })
-  })
+      "/proj/prompt.ts",
+    );
+    expect(defs[0].type).toEqual({ kind: "opaque", syntax: "Inventory" });
+  });
 
-  test('marks a class instance type opaque rather than expanding its members', () => {
+  test("marks a class instance type opaque rather than expanding its members", () => {
     const defs = extractParams(
       {
-        '/proj/db.ts': `export declare class Database {
+        "/proj/db.ts": `export declare class Database {
   readonly url: string
   query(sql: string): Promise<unknown[]>
 }`,
-        '/proj/prompt.ts': `import type { Database } from './db'
+        "/proj/prompt.ts": `import type { Database } from './db'
 export function run(db: Database) {}`,
       },
-      '/proj/prompt.ts'
-    )
+      "/proj/prompt.ts",
+    );
     // `url` is plain data, so the all-method rule would not fire here: this is
     // the class rule specifically.
-    expect(defs[0].type).toEqual({ kind: 'opaque', syntax: 'Database' })
-  })
+    expect(defs[0].type).toEqual({ kind: "opaque", syntax: "Database" });
+  });
 
-  test('sees a class through an intersection', () => {
+  test("sees a class through an intersection", () => {
     const defs = extractParams(
       {
-        '/proj/db.ts': `export declare class Database { query(sql: string): void }
+        "/proj/db.ts": `export declare class Database { query(sql: string): void }
 export type Db = Database & { $client: { name: string } }`,
-        '/proj/prompt.ts': `import type { Db } from './db'
+        "/proj/prompt.ts": `import type { Db } from './db'
 export function run(db: Db) {}`,
       },
-      '/proj/prompt.ts'
-    )
+      "/proj/prompt.ts",
+    );
     // Building the whole means building the class half, which no form can do.
-    expect(defs[0].type.kind).toBe('opaque')
-  })
+    expect(defs[0].type.kind).toBe("opaque");
+  });
 
-  test('keeps a branded primitive editable despite the intersection', () => {
+  test("keeps a branded primitive editable despite the intersection", () => {
     const defs = extractParams(
       {
-        '/proj/ids.ts': `export type TaskId = string & { readonly __brand: 'TaskId' }`,
-        '/proj/prompt.ts': `import type { TaskId } from './ids'
+        "/proj/ids.ts": `export type TaskId = string & { readonly __brand: 'TaskId' }`,
+        "/proj/prompt.ts": `import type { TaskId } from './ids'
 export function run(taskId: TaskId) {}`,
       },
-      '/proj/prompt.ts'
-    )
-    expect(defs[0].type.kind).toBe('primitive')
-    expect(defs[0].type).toMatchObject({ base: 'string' })
-  })
+      "/proj/prompt.ts",
+    );
+    expect(defs[0].type.kind).toBe("primitive");
+    expect(defs[0].type).toMatchObject({ base: "string" });
+  });
 
-  test('opacity does not swallow an ordinary data object', () => {
+  test("opacity does not swallow an ordinary data object", () => {
     const defs = extractParams(
       {
-        '/proj/prompt.ts': `export function run(info: { title: string; describe(): string }) {}`,
+        "/proj/prompt.ts": `export function run(info: { title: string; describe(): string }) {}`,
       },
-      '/proj/prompt.ts'
-    )
+      "/proj/prompt.ts",
+    );
     // One data property is enough: the all-method rule must not fire.
-    expect(defs[0].type.kind).toBe('object')
-  })
+    expect(defs[0].type.kind).toBe("object");
+  });
 
-  test('keeps a template-literal string type opaque, tagged with its string base for editor routing', () => {
+  test("keeps a template-literal string type opaque, tagged with its string base for editor routing", () => {
     const defs = extractParams(
       {
-        '/proj/ids.ts': 'export type TaskId = `tsk_${string}`',
-        '/proj/prompt.ts': `import type { TaskId } from './ids'
+        "/proj/ids.ts": "export type TaskId = `tsk_${string}`",
+        "/proj/prompt.ts": `import type { TaskId } from './ids'
 export function run(taskId: TaskId) {}`,
       },
-      '/proj/prompt.ts'
-    )
-    expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'TaskId', base: 'string' })
-  })
+      "/proj/prompt.ts",
+    );
+    expect(defs[0].type).toEqual({
+      kind: "primitive",
+      syntax: "TaskId",
+      base: "string",
+    });
+  });
 
-  test('keeps a branded primitive opaque, tagged with its string base for editor routing', () => {
+  test("keeps a branded primitive opaque, tagged with its string base for editor routing", () => {
     const defs = extractParams(
       {
-        '/proj/ids.ts': `export type UserId = string & { readonly __brand: 'UserId' }`,
-        '/proj/prompt.ts': `import type { UserId } from './ids'
+        "/proj/ids.ts": `export type UserId = string & { readonly __brand: 'UserId' }`,
+        "/proj/prompt.ts": `import type { UserId } from './ids'
 export function run(id: UserId) {}`,
       },
-      '/proj/prompt.ts'
-    )
-    expect(defs[0].type).toEqual({ kind: 'primitive', syntax: 'UserId', base: 'string' })
-  })
+      "/proj/prompt.ts",
+    );
+    expect(defs[0].type).toEqual({
+      kind: "primitive",
+      syntax: "UserId",
+      base: "string",
+    });
+  });
 
-  test('stops recursing on self-referential types', () => {
+  test("stops recursing on self-referential types", () => {
     const defs = extractParams(
       {
-        '/proj/prompt.ts': `interface Node { label: string; children: Node[] }
+        "/proj/prompt.ts": `interface Node { label: string; children: Node[] }
 export function render(root: Node) {}`,
       },
-      '/proj/prompt.ts'
-    )
-    expect(defs[0].type.kind).toBe('object')
-  })
-})
+      "/proj/prompt.ts",
+    );
+    expect(defs[0].type.kind).toBe("object");
+  });
+});

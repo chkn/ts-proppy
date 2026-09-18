@@ -1,48 +1,82 @@
-import React from 'react'
-import type { PropType } from '../types/prop-type.js'
-import type { PropValue } from '../types/prop-value.js'
-import type { EditorPlugin, SlotPath } from './types.js'
-import { getDiscriminatedUnionInfo } from '../types/discriminated-union.js'
-import { getSelectableUnionInfo } from '../types/selectable-union.js'
-import { ArrayEditor } from './editors/ArrayEditor.js'
-import { TupleEditor } from './editors/TupleEditor.js'
-import { ObjectEditor } from './editors/ObjectEditor.js'
-import { RecordEditor } from './editors/RecordEditor.js'
-import { DiscriminatedUnionEditor } from './editors/DiscriminatedUnionEditor.js'
-import { ConstantUnionEditor } from './editors/ConstantUnionEditor.js'
-import { UnionMemberEditor } from './editors/UnionMemberEditor.js'
-import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
+import { getDiscriminatedUnionInfo } from "../types/discriminated-union.js";
+import type { PropType } from "../types/prop-type.js";
+import type { PropValue } from "../types/prop-value.js";
+import { getSelectableUnionInfo } from "../types/selectable-union.js";
+import { ArrayEditor } from "./editors/ArrayEditor.js";
+import { ConstantUnionEditor } from "./editors/ConstantUnionEditor.js";
+import { DiscriminatedUnionEditor } from "./editors/DiscriminatedUnionEditor.js";
+import { JsonFallbackEditor } from "./editors/JsonFallbackEditor.js";
+import { ObjectEditor } from "./editors/ObjectEditor.js";
+import { RecordEditor } from "./editors/RecordEditor.js";
+import { TupleEditor } from "./editors/TupleEditor.js";
+import { UnionMemberEditor } from "./editors/UnionMemberEditor.js";
+import type { EditorPlugin, SlotPath } from "./types.js";
 
 interface RichEditorProps {
-  propType: PropType
-  value: PropValue | undefined
-  onChange: (value: PropValue) => void
-  plugins?: EditorPlugin[]
-  path?: SlotPath
+  propType: PropType;
+  value: PropValue | undefined;
+  onChange: (value: PropValue) => void;
+  plugins?: EditorPlugin[];
+  path?: SlotPath;
   /** See {@link ItemEditorProps.disabled}. */
-  disabled?: boolean
+  disabled?: boolean;
 }
 
-export function RichEditor({ propType, value, onChange, plugins, path = [], disabled }: RichEditorProps) {
-  const propDef = { name: '', type: propType, optional: false }
+export function RichEditor({
+  propType,
+  value,
+  onChange,
+  plugins,
+  path = [],
+  disabled,
+}: RichEditorProps) {
+  const propDef = { name: "", type: propType, optional: false };
 
   // Array type
-  if (propType.kind === 'array') {
-    return <ArrayEditor element={propType.element} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+  if (propType.kind === "array") {
+    return (
+      <ArrayEditor
+        element={propType.element}
+        value={value}
+        onChange={onChange}
+        plugins={plugins}
+        path={path}
+        disabled={disabled}
+      />
+    );
   }
 
   // Tuple type
-  if (propType.kind === 'tuple') {
-    return <TupleEditor elements={propType.elements} rest={propType.rest} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+  if (propType.kind === "tuple") {
+    return (
+      <TupleEditor
+        elements={propType.elements}
+        rest={propType.rest}
+        value={value}
+        onChange={onChange}
+        plugins={plugins}
+        path={path}
+        disabled={disabled}
+      />
+    );
   }
 
   // Record type
-  if (propType.kind === 'record') {
-    return <RecordEditor value={propType.value} current={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+  if (propType.kind === "record") {
+    return (
+      <RecordEditor
+        value={propType.value}
+        current={value}
+        onChange={onChange}
+        plugins={plugins}
+        path={path}
+        disabled={disabled}
+      />
+    );
   }
 
   // Discriminated union
-  const discriminatedUnionInfo = getDiscriminatedUnionInfo(propType)
+  const discriminatedUnionInfo = getDiscriminatedUnionInfo(propType);
   if (discriminatedUnionInfo) {
     return (
       <DiscriminatedUnionEditor
@@ -53,16 +87,26 @@ export function RichEditor({ propType, value, onChange, plugins, path = [], disa
         path={path}
         disabled={disabled}
       />
-    )
+    );
   }
 
   // Constant union
-  if (propType.kind === 'union' && propType.types.every(t => t.kind === 'constant')) {
-    return <ConstantUnionEditor propDef={propDef} value={value} onChange={onChange} disabled={disabled} />
+  if (
+    propType.kind === "union" &&
+    propType.types.every(t => t.kind === "constant")
+  ) {
+    return (
+      <ConstantUnionEditor
+        propDef={propDef}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    );
   }
 
   // Any other union: a dropdown over its members
-  const unionInfo = getSelectableUnionInfo(propType)
+  const unionInfo = getSelectableUnionInfo(propType);
   if (unionInfo) {
     return (
       <UnionMemberEditor
@@ -74,14 +118,30 @@ export function RichEditor({ propType, value, onChange, plugins, path = [], disa
         path={path}
         disabled={disabled}
       />
-    )
+    );
   }
 
   // Object with known properties
-  if (propType.kind === 'object' && propType.properties.length > 0) {
-    return <ObjectEditor properties={propType.properties} value={value} onChange={onChange} plugins={plugins} path={path} disabled={disabled} />
+  if (propType.kind === "object" && propType.properties.length > 0) {
+    return (
+      <ObjectEditor
+        properties={propType.properties}
+        value={value}
+        onChange={onChange}
+        plugins={plugins}
+        path={path}
+        disabled={disabled}
+      />
+    );
   }
 
   // Fallback
-  return <JsonFallbackEditor propDef={propDef} value={value} onChange={onChange} disabled={disabled} />
+  return (
+    <JsonFallbackEditor
+      propDef={propDef}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+    />
+  );
 }

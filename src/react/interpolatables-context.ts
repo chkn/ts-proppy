@@ -1,5 +1,5 @@
-import { createContext, useContext } from 'react'
-import type { InterpolatableIdentifier } from '../types/prop-definition.js'
+import { createContext, useContext } from "react";
+import type { InterpolatableIdentifier } from "../types/prop-definition.js";
 
 /**
  * The identifiers available for `${…}` interpolation to every slot below the
@@ -11,9 +11,11 @@ import type { InterpolatableIdentifier } from '../types/prop-definition.js'
  * what lets a string three levels into an object still get `${…}` completion,
  * and lets an {@link EditorPlugin} read them without being passed them.
  */
-export const InterpolatablesContext = createContext<InterpolatableIdentifier[] | undefined>(undefined)
+export const InterpolatablesContext = createContext<
+  InterpolatableIdentifier[] | undefined
+>(undefined);
 
 /** The interpolatables in scope for the slot being rendered, if any. */
 export function useInterpolatables(): InterpolatableIdentifier[] | undefined {
-  return useContext(InterpolatablesContext)
+  return useContext(InterpolatablesContext);
 }

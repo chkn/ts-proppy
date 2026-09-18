@@ -2,7 +2,11 @@ import type React from "react";
 import { useState } from "react";
 import type { PropType } from "../types/prop-type.js";
 import { isComplexPropType } from "./complex-type.js";
-import { DEFAULT_SYNTAX_MAX, shortSyntax, typeSummary } from "./format-syntax.js";
+import {
+  DEFAULT_SYNTAX_MAX,
+  shortSyntax,
+  typeSummary,
+} from "./format-syntax.js";
 import {
   colors,
   descriptionStyle,

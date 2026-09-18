@@ -1,4 +1,3 @@
-import React from "react";
 import type { PropDefinition } from "../../types/prop-definition.js";
 import type { PropValue } from "../../types/prop-value.js";
 import { controlStyle } from "../theme.js";

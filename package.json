@@ -40,13 +40,15 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.react.json",
+    "lint": "biome check .",
+    "format": "biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run lint && npm run build && npm test"
   },
   "peerDependencies": {
-    "typescript": ">=5.0.0-0 <7.0.0-0",
-    "react": ">=18.0.0"
+    "react": ">=18.0.0",
+    "typescript": ">=5.0.0-0 <7.0.0-0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -54,9 +56,12 @@
     }
   },
   "devDependencies": {
-    "typescript": "^6.0.0",
+    "@biomejs/biome": "^2.5.14",
     "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.3.7",
     "react": "^18.0.0",
+    "react-dom": "^18.3.1",
+    "typescript": "^6.0.0",
     "vitest": "^3.0.0"
   }
 }

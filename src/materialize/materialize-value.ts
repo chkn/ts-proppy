@@ -1,5 +1,5 @@
-import type { PropValue } from '../types/prop-value.js'
-import { parseInterpolationPath } from '../editing/interpolation.js'
+import { parseInterpolationPath } from "../editing/interpolation.js";
+import type { PropValue } from "../types/prop-value.js";
 
 /**
  * Materializes a `PropValue` into a concrete runtime value.
@@ -14,85 +14,97 @@ import { parseInterpolationPath } from '../editing/interpolation.js'
  *   - All other kinds propagate scope recursively to nested values.
  * @returns The materialized value.
  */
-export async function materializeValue(value: PropValue, scope?: Record<string, any>): Promise<any> {
+export async function materializeValue(
+  value: PropValue,
+  scope?: Record<string, any>,
+): Promise<any> {
   switch (value.kind) {
-    case 'primitive':
-      return value.value
+    case "primitive":
+      return value.value;
 
-    case 'template': {
-      let out = ''
+    case "template": {
+      let out = "";
       for (const seg of value.value) {
-        if (typeof seg === 'string') {
-          out += seg
-          continue
+        if (typeof seg === "string") {
+          out += seg;
+          continue;
         }
-        const resolved = resolveTokenInScope(seg.expr, scope)
+        const resolved = resolveTokenInScope(seg.expr, scope);
         if (!resolved.found) {
-          throw new Error(`Variable '${seg.expr}' not found in scope for template string`)
+          throw new Error(
+            `Variable '${seg.expr}' not found in scope for template string`,
+          );
         }
-        out += String(resolved.value)
+        out += String(resolved.value);
       }
-      return out
+      return out;
     }
 
-    case 'object': {
+    case "object": {
       const entries = await Promise.all(
-        Object.entries(value.properties).map(async ([k, v]) => [k, await materializeValue(v, scope)] as const)
-      )
-      return Object.fromEntries(entries)
+        Object.entries(value.properties).map(
+          async ([k, v]) => [k, await materializeValue(v, scope)] as const,
+        ),
+      );
+      return Object.fromEntries(entries);
     }
 
-    case 'array':
-    case 'tuple':
-      return Promise.all(value.elements.map(v => materializeValue(v, scope)))
+    case "array":
+    case "tuple":
+      return Promise.all(value.elements.map(v => materializeValue(v, scope)));
 
-    case 'lambda': {
-      if (!scope) return new Function(...value.parameters, value.body)
-      const scopeKeys = Object.keys(scope)
-      const scopeValues = Object.values(scope)
-      const fn = new Function(...scopeKeys, ...value.parameters, value.body)
-      return fn.bind(null, ...scopeValues)
+    case "lambda": {
+      if (!scope) return new Function(...value.parameters, value.body);
+      const scopeKeys = Object.keys(scope);
+      const scopeValues = Object.values(scope);
+      const fn = new Function(...scopeKeys, ...value.parameters, value.body);
+      return fn.bind(null, ...scopeValues);
     }
 
-    case 'functionCall': {
+    case "functionCall": {
       // Unresolved candidates: the first import among them is the one a file
       // without a matching destructure would get.
       const binding = Array.isArray(value.binding)
-        ? value.binding.find(b => b.kind === 'import')
-        : value.binding
-      const spec = binding?.kind === 'import' ? binding.spec : undefined
-      let fn: Function
-      let source: string
+        ? value.binding.find(b => b.kind === "import")
+        : value.binding;
+      const spec = binding?.kind === "import" ? binding.spec : undefined;
+      let fn: (...args: unknown[]) => unknown;
+      let source: string;
       if (!spec) {
-        fn = scope?.[value.callee]
-        source = 'scope'
+        fn = scope?.[value.callee];
+        source = "scope";
       } else {
-        const mod = await import(/* @vite-ignore */ spec.from)
-        fn = spec.isDefault ? mod.default : mod[spec.name]
-        source = spec.from
+        const mod = await import(/* @vite-ignore */ spec.from);
+        fn = spec.isDefault ? mod.default : mod[spec.name];
+        source = spec.from;
       }
-      if (typeof fn !== 'function') {
-        throw new Error(`${spec?.name ?? value.callee} from '${source}' is not a function`)
+      if (typeof fn !== "function") {
+        throw new Error(
+          `${spec?.name ?? value.callee} from '${source}' is not a function`,
+        );
       }
-      const args = await Promise.all(value.args.map(v => materializeValue(v, scope)))
-      return fn(...args)
+      const args = await Promise.all(
+        value.args.map(v => materializeValue(v, scope)),
+      );
+      return fn(...args);
     }
 
-    case 'reference': {
-      const [root, ...rest] = value.path
-      if (!scope || !(root in scope)) throw new Error(`'${root}' not found in scope`)
-      let cur: unknown = scope[root]
+    case "reference": {
+      const [root, ...rest] = value.path;
+      if (!scope || !(root in scope))
+        throw new Error(`'${root}' not found in scope`);
+      let cur: unknown = scope[root];
       for (const key of rest) {
-        if (cur == null || typeof cur !== 'object' || !(key in cur)) {
-          throw new Error(`'${value.path.join('.')}' not found in scope`)
+        if (cur == null || typeof cur !== "object" || !(key in cur)) {
+          throw new Error(`'${value.path.join(".")}' not found in scope`);
         }
-        cur = (cur as Record<string, unknown>)[key]
+        cur = (cur as Record<string, unknown>)[key];
       }
-      return cur
+      return cur;
     }
 
-    case 'raw': {
-      throw new Error(`Cannot materialize raw value: ${value.sourceText}`)
+    case "raw": {
+      throw new Error(`Cannot materialize raw value: ${value.sourceText}`);
     }
   }
 }
@@ -105,18 +117,19 @@ export async function materializeValue(value: PropValue, scope?: Record<string, 
  */
 function resolveTokenInScope(
   expr: string,
-  scope: Record<string, any> | undefined
+  scope: Record<string, any> | undefined,
 ): { found: boolean; value?: unknown } {
-  if (!scope) return { found: false }
-  if (expr in scope) return { found: true, value: scope[expr] }
+  if (!scope) return { found: false };
+  if (expr in scope) return { found: true, value: scope[expr] };
 
-  const path = parseInterpolationPath(expr)
-  if (!path) return { found: false }
+  const path = parseInterpolationPath(expr);
+  if (!path) return { found: false };
 
-  let cur: unknown = scope
+  let cur: unknown = scope;
   for (const key of path) {
-    if (cur == null || typeof cur !== 'object' || !(key in cur)) return { found: false }
-    cur = (cur as Record<string, unknown>)[key]
+    if (cur == null || typeof cur !== "object" || !(key in cur))
+      return { found: false };
+    cur = (cur as Record<string, unknown>)[key];
   }
-  return { found: true, value: cur }
+  return { found: true, value: cur };
 }

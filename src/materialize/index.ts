@@ -1,1 +1,1 @@
-export { materializeValue } from './materialize-value.js'
+export { materializeValue } from "./materialize-value.js";

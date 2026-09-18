@@ -1,34 +1,44 @@
-import { useState } from 'react'
-import type { PropsEditorProps } from './types.js'
-import type { PropValue } from '../types/prop-value.js'
-import { isComplexPropType } from './complex-type.js'
-import { ItemEditor } from './ItemEditor.js'
-import { PropRow } from './PropRow.js'
-import { RichEditor } from './RichEditor.js'
-import { JsonFallbackEditor } from './editors/JsonFallbackEditor.js'
-import { buttonStyle, colors } from './theme.js'
-import { InterpolatablesContext } from './interpolatables-context.js'
+import { useState } from "react";
+import type { PropValue } from "../types/prop-value.js";
+import { isComplexPropType } from "./complex-type.js";
+import { JsonFallbackEditor } from "./editors/JsonFallbackEditor.js";
+import { ItemEditor } from "./ItemEditor.js";
+import { InterpolatablesContext } from "./interpolatables-context.js";
+import { PropRow } from "./PropRow.js";
+import { RichEditor } from "./RichEditor.js";
+import { buttonStyle, colors } from "./theme.js";
+import type { PropsEditorProps } from "./types.js";
 
-export function PropsEditor({ props, onChange, plugins, disabled, interpolatables }: PropsEditorProps) {
-  const [jsonMode, setJsonMode] = useState<Record<string, boolean>>({})
+export function PropsEditor({
+  props,
+  onChange,
+  plugins,
+  disabled,
+  interpolatables,
+}: PropsEditorProps) {
+  const [jsonMode, setJsonMode] = useState<Record<string, boolean>>({});
 
   const toggleJsonMode = (propName: string) => {
-    setJsonMode(prev => ({ ...prev, [propName]: !prev[propName] }))
-  }
+    setJsonMode(prev => ({ ...prev, [propName]: !prev[propName] }));
+  };
 
-  const { definitions, values } = props
+  const { definitions, values } = props;
 
   if (definitions.length === 0) {
-    return <p style={{ fontSize: '12px', color: colors.textMuted }}>No props defined</p>
+    return (
+      <p style={{ fontSize: "12px", color: colors.textMuted }}>
+        No props defined
+      </p>
+    );
   }
 
   return (
     <InterpolatablesContext.Provider value={interpolatables}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {definitions.map(propDef => {
-          const isComplex = isComplexPropType(propDef.type)
-          const isJson = jsonMode[propDef.name]
-          const currentValue = values?.[propDef.name]
+          const isComplex = isComplexPropType(propDef.type);
+          const isJson = jsonMode[propDef.name];
+          const currentValue = values?.[propDef.name];
 
           const editor = !isComplex ? (
             <ItemEditor
@@ -55,7 +65,7 @@ export function PropsEditor({ props, onChange, plugins, disabled, interpolatable
               path={[propDef.name]}
               disabled={disabled}
             />
-          )
+          );
 
           return (
             <PropRow
@@ -66,17 +76,21 @@ export function PropsEditor({ props, onChange, plugins, disabled, interpolatable
               description={propDef.description}
               actions={
                 isComplex && (
-                  <button type="button" onClick={() => toggleJsonMode(propDef.name)} style={buttonStyle}>
-                    {isJson ? 'Rich Editor' : 'JSON'}
+                  <button
+                    type="button"
+                    onClick={() => toggleJsonMode(propDef.name)}
+                    style={buttonStyle}
+                  >
+                    {isJson ? "Rich Editor" : "JSON"}
                   </button>
                 )
               }
             >
               {editor}
             </PropRow>
-          )
+          );
         })}
       </div>
     </InterpolatablesContext.Provider>
-  )
+  );
 }

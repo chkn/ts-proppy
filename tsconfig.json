@@ -14,5 +14,10 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.tsx", "src/react.ts", "src/react/**"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.tsx",
+    "src/react.ts",
+    "src/react/**"
+  ]
 }

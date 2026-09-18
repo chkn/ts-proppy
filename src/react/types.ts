@@ -1,25 +1,28 @@
-import type { ExtractedProps } from '../types/extracted-props.js'
-import type { InterpolatableIdentifier, PropDefinition } from '../types/prop-definition.js'
-import type { PropType } from '../types/prop-type.js'
-import type { PropValue } from '../types/prop-value.js'
+import type { ExtractedProps } from "../types/extracted-props.js";
+import type {
+  InterpolatableIdentifier,
+  PropDefinition,
+} from "../types/prop-definition.js";
+import type { PropType } from "../types/prop-type.js";
+import type { PropValue } from "../types/prop-value.js";
 
 export interface PropsEditorProps {
-  props: ExtractedProps
-  onChange: (name: string, value: PropValue) => void
+  props: ExtractedProps;
+  onChange: (name: string, value: PropValue) => void;
   /** Custom editor plugins (checked before built-in editors) */
-  plugins?: EditorPlugin[]
+  plugins?: EditorPlugin[];
   /**
    * Identifiers available for `${…}` interpolation in every string slot, at
    * any depth. See {@link useInterpolatables}.
    */
-  interpolatables?: InterpolatableIdentifier[]
+  interpolatables?: InterpolatableIdentifier[];
   /**
    * Renders every field read-only: focusable and selectable, so a shown
    * value can still be read and copied, but not changed. A container
    * editor's own add/remove controls are disabled too; its collapse/expand
    * disclosure is not — that's navigation, not an edit.
    */
-  disabled?: boolean
+  disabled?: boolean;
 }
 
 /**
@@ -30,17 +33,17 @@ export interface PropsEditorProps {
  * Threaded through every nested editor so an {@link EditorPlugin} can key off
  * *which* slot it is looking at, not just what type the slot has.
  */
-export type SlotPath = readonly string[]
+export type SlotPath = readonly string[];
 
 export interface ItemEditorProps {
-  propDef: PropDefinition
-  value: PropValue | undefined
-  onChange: (value: PropValue) => void
-  className?: string
+  propDef: PropDefinition;
+  value: PropValue | undefined;
+  onChange: (value: PropValue) => void;
+  className?: string;
   /** This slot's position in the value being edited. See {@link SlotPath}. */
-  path?: SlotPath
+  path?: SlotPath;
   /** See {@link PropsEditorProps.disabled}. */
-  disabled?: boolean
+  disabled?: boolean;
 }
 
 export interface EditorPlugin {
@@ -49,6 +52,6 @@ export interface EditorPlugin {
    * value being edited, so a plugin can match one particular field rather than
    * every occurrence of a type.
    */
-  match: (propType: PropType, path: SlotPath) => boolean
-  component: React.ComponentType<ItemEditorProps>
+  match: (propType: PropType, path: SlotPath) => boolean;
+  component: React.ComponentType<ItemEditorProps>;
 }

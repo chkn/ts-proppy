@@ -1,5 +1,5 @@
-import type { PropType } from './prop-type.js'
-import type { PropValue } from './prop-value.js'
+import type { PropType } from "./prop-type.js";
+import type { PropValue } from "./prop-value.js";
 
 /**
  * A union rendered as a member picker: a dropdown listing every member, and
@@ -8,9 +8,9 @@ import type { PropValue } from './prop-value.js'
  */
 export interface SelectableUnionInfo {
   /** The union's members, in declaration order — one dropdown option each. */
-  members: PropType[]
+  members: PropType[];
   /** Index of the member to open on: the first that isn't a single constant. */
-  defaultIndex: number
+  defaultIndex: number;
 }
 
 /**
@@ -20,38 +20,41 @@ export interface SelectableUnionInfo {
  * A union of nothing but constants is already just a dropdown, so it stays with
  * the editor built for that rather than gaining an empty editor slot below.
  */
-export function getSelectableUnionInfo(propType: PropType): SelectableUnionInfo | null {
-  if (propType.kind !== 'union') return null
+export function getSelectableUnionInfo(
+  propType: PropType,
+): SelectableUnionInfo | null {
+  if (propType.kind !== "union") return null;
 
-  const defaultIndex = propType.types.findIndex(t => t.kind !== 'constant')
-  if (defaultIndex === -1) return null
+  const defaultIndex = propType.types.findIndex(t => t.kind !== "constant");
+  if (defaultIndex === -1) return null;
 
-  return { members: propType.types, defaultIndex }
+  return { members: propType.types, defaultIndex };
 }
 
 /** Whether `member` could have produced `value`, ignoring constants. */
 function accepts(member: PropType, value: PropValue): boolean {
   switch (member.kind) {
-    case 'object':
-    case 'record':
-      return value.kind === 'object'
-    case 'array':
-      return value.kind === 'array'
-    case 'tuple':
+    case "object":
+    case "record":
+      return value.kind === "object";
+    case "array":
+      return value.kind === "array";
+    case "tuple":
       // A tuple literal in source parses as an array value.
-      return value.kind === 'tuple' || value.kind === 'array'
-    case 'function':
-      return value.kind === 'lambda' || value.kind === 'functionCall'
-    case 'primitive': {
+      return value.kind === "tuple" || value.kind === "array";
+    case "function":
+      return value.kind === "lambda" || value.kind === "functionCall";
+    case "primitive": {
       // A template interpolates into text, so only a stringy member takes one.
-      if (value.kind === 'template') return member.syntax !== 'number' && member.syntax !== 'boolean'
-      if (value.kind !== 'primitive') return false
-      if (member.syntax === 'number') return typeof value.value === 'number'
-      if (member.syntax === 'boolean') return typeof value.value === 'boolean'
-      return typeof value.value === 'string'
+      if (value.kind === "template")
+        return member.syntax !== "number" && member.syntax !== "boolean";
+      if (value.kind !== "primitive") return false;
+      if (member.syntax === "number") return typeof value.value === "number";
+      if (member.syntax === "boolean") return typeof value.value === "boolean";
+      return typeof value.value === "string";
     }
     default:
-      return false
+      return false;
   }
 }
 
@@ -64,14 +67,21 @@ function accepts(member: PropType, value: PropValue): boolean {
  * shape: `'auto'` in `'auto' | string` reads as the constant, not as an
  * arbitrary string that happens to spell it.
  */
-export function matchUnionMember(info: SelectableUnionInfo, value: PropValue | undefined): number {
-  if (!value) return info.defaultIndex
+export function matchUnionMember(
+  info: SelectableUnionInfo,
+  value: PropValue | undefined,
+): number {
+  if (!value) return info.defaultIndex;
 
-  if (value.kind === 'primitive') {
-    const constant = info.members.findIndex(m => m.kind === 'constant' && m.value === value.value)
-    if (constant !== -1) return constant
+  if (value.kind === "primitive") {
+    const constant = info.members.findIndex(
+      m => m.kind === "constant" && m.value === value.value,
+    );
+    if (constant !== -1) return constant;
   }
 
-  const member = info.members.findIndex(m => m.kind !== 'constant' && accepts(m, value))
-  return member === -1 ? info.defaultIndex : member
+  const member = info.members.findIndex(
+    m => m.kind !== "constant" && accepts(m, value),
+  );
+  return member === -1 ? info.defaultIndex : member;
 }

@@ -1,21 +1,21 @@
-import React, { useState } from 'react'
-import type { PropDefinition } from '../../types/prop-definition.js'
-import type { PropValue } from '../../types/prop-value.js'
-import type { SelectableUnionInfo } from '../../types/selectable-union.js'
-import type { EditorPlugin, SlotPath } from '../types.js'
-import { matchUnionMember } from '../../types/selectable-union.js'
-import { ItemEditor } from '../ItemEditor.js'
-import { controlStyle } from '../theme.js'
+import { useState } from "react";
+import type { PropDefinition } from "../../types/prop-definition.js";
+import type { PropValue } from "../../types/prop-value.js";
+import type { SelectableUnionInfo } from "../../types/selectable-union.js";
+import { matchUnionMember } from "../../types/selectable-union.js";
+import { ItemEditor } from "../ItemEditor.js";
+import { controlStyle } from "../theme.js";
+import type { EditorPlugin, SlotPath } from "../types.js";
 
 interface UnionMemberEditorProps {
-  propDef: PropDefinition
-  unionInfo: SelectableUnionInfo
-  value: PropValue | undefined
-  onChange: (value: PropValue) => void
-  plugins?: EditorPlugin[]
-  className?: string
-  path?: SlotPath
-  disabled?: boolean
+  propDef: PropDefinition;
+  unionInfo: SelectableUnionInfo;
+  value: PropValue | undefined;
+  onChange: (value: PropValue) => void;
+  plugins?: EditorPlugin[];
+  className?: string;
+  path?: SlotPath;
+  disabled?: boolean;
 }
 
 /**
@@ -43,50 +43,54 @@ export function UnionMemberEditor({
   path,
   disabled,
 }: UnionMemberEditorProps) {
-  const { members } = unionInfo
+  const { members } = unionInfo;
 
   // The selection normally follows the value, but an explicit pick has to stick
   // even when the value can't express it: an empty value is indistinguishable
   // from an `undefined` constant.
-  const [picked, setPicked] = useState<number | null>(null)
-  const selected = picked ?? matchUnionMember(unionInfo, value)
-  const member = members[selected]
+  const [picked, setPicked] = useState<number | null>(null);
+  const selected = picked ?? matchUnionMember(unionInfo, value);
+  const member = members[selected];
 
   // What was last entered under each open-ended member, so switching away and
   // back restores it rather than starting over. Keyed by member index, which is
   // stable for as long as this editor is mounted against the same property.
-  const [drafts, setDrafts] = useState<Record<number, PropValue | undefined>>({})
+  const [drafts, setDrafts] = useState<Record<number, PropValue | undefined>>(
+    {},
+  );
 
   const handleSelect = (option: string) => {
-    const index = Number(option)
-    setDrafts(prev => ({ ...prev, [selected]: value }))
-    setPicked(index)
+    const index = Number(option);
+    setDrafts(prev => ({ ...prev, [selected]: value }));
+    setPicked(index);
 
     // A constant member is its own value; an open-ended one resumes its draft,
     // falling back to empty the first time it's selected.
-    const chosen = members[index]
+    const chosen = members[index];
     onChange(
-      chosen.kind === 'constant'
-        ? { kind: 'primitive', value: chosen.value }
-        : drafts[index] ?? { kind: 'primitive', value: undefined }
-    )
-  }
+      chosen.kind === "constant"
+        ? { kind: "primitive", value: chosen.value }
+        : (drafts[index] ?? { kind: "primitive", value: undefined }),
+    );
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
       <select
         value={String(selected)}
-        onChange={(e) => handleSelect(e.target.value)}
+        onChange={e => handleSelect(e.target.value)}
         className={className}
         style={className ? undefined : controlStyle}
         disabled={disabled}
       >
         {members.map((m, i) => (
-          <option key={i} value={String(i)}>{m.syntax}</option>
+          <option key={i} value={String(i)}>
+            {m.syntax}
+          </option>
         ))}
       </select>
 
-      {member.kind !== 'constant' && (
+      {member.kind !== "constant" && (
         <ItemEditor
           propDef={{ ...propDef, type: member }}
           value={value}
@@ -98,5 +102,5 @@ export function UnionMemberEditor({
         />
       )}
     </div>
-  )
+  );
 }
