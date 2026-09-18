@@ -19,9 +19,9 @@ export const colors = {
   textPrimary: "var(--proppy-text-primary, inherit)",
   textMuted: "var(--proppy-text-muted, #999)",
   textSecondary: "var(--proppy-text-secondary, #666)",
-  dangerBg: "var(--proppy-danger-bg, #fee)",
+  dangerBg: "var(--proppy-danger-bg, none)",
   dangerBorder: "var(--proppy-danger-border, #fcc)",
-  dangerColor: "var(--proppy-danger-color, inherit)",
+  dangerColor: "var(--proppy-danger-color, #dc2626)",
   menuBg: "var(--proppy-menu-bg, #fff)",
   menuColor: "var(--proppy-menu-color, inherit)",
   menuActiveBg: "var(--proppy-menu-active-bg, #eef)",
@@ -52,6 +52,33 @@ export const buttonStyle: CSSProperties = {
   fontSize: 11,
   fontFamily: "inherit",
   cursor: "pointer",
+};
+
+/** A quiet "add" affordance — plain text, not a full-width dashed button, so
+ *  a short list doesn't get a control wider than everything above it. */
+export const addButtonStyle: CSSProperties = {
+  alignSelf: "flex-start",
+  padding: "2px 0",
+  border: "none",
+  background: "none",
+  color: colors.textSecondary,
+  fontSize: 12,
+  fontFamily: "inherit",
+  cursor: "pointer",
+};
+
+/** A minimal, borderless remove/delete button — a colored glyph, not a box,
+ *  so a list of them doesn't read as heavier than the rest of the form. */
+export const dangerButtonStyle: CSSProperties = {
+  background: colors.dangerBg,
+  border: "none",
+  borderRadius: radius.sm,
+  cursor: "pointer",
+  color: colors.dangerColor,
+  fontSize: 17,
+  lineHeight: 1,
+  padding: "2px 4px",
+  fontFamily: "inherit",
 };
 
 /** The left-rule "tree" indent used to show nesting without stacking boxes. */

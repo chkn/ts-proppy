@@ -4,10 +4,10 @@ import type { PropValue } from "../../types/prop-value.js";
 import { isComplexPropType } from "../complex-type.js";
 import { ItemEditor } from "../ItemEditor.js";
 import {
-  buttonStyle,
+  addButtonStyle,
   colors,
+  dangerButtonStyle,
   nestedGroupStyle,
-  radius,
   rowHeaderHeight,
 } from "../theme.js";
 import type { EditorPlugin, SlotPath } from "../types.js";
@@ -87,16 +87,9 @@ export function ArrayEditor({
             onClick={() => removeItem(index)}
             aria-label={`Remove item ${index + 1}`}
             disabled={disabled}
-            style={{
-              ...buttonStyle,
-              padding: "5px 8px",
-              marginTop: removeButtonOffset,
-              background: colors.dangerBg,
-              color: colors.dangerColor,
-              borderColor: colors.dangerBorder,
-            }}
+            style={{ ...dangerButtonStyle, marginTop: removeButtonOffset }}
           >
-            ✕
+            ×
           </button>
         </div>
       ))}
@@ -104,13 +97,7 @@ export function ArrayEditor({
         type="button"
         onClick={addItem}
         disabled={disabled}
-        style={{
-          ...buttonStyle,
-          width: "100%",
-          padding: "6px",
-          borderStyle: "dashed",
-          borderRadius: radius.sm,
-        }}
+        style={addButtonStyle}
       >
         + Add item
       </button>
