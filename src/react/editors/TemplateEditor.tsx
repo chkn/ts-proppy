@@ -24,23 +24,54 @@ function escapeHTML(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function renderPlainText(text: string): string {
-  const withCode = escapeHTML(text).replace(
-    /`[^`\n]+`/g,
-    match => `<span class="te-code">${match}</span>`,
-  );
-  return withCode.replace(/\n/g, "<br>");
+function renderText(text: string, isCode: boolean): string {
+  if (!text) return "";
+  const html = escapeHTML(text).replace(/\n/g, "<br>");
+  return isCode ? `<span class="te-code">${html}</span>` : html;
 }
 
-function toHTML(value: TemplateValue): string {
+/** Stands in for an interpolation when matching backtick pairs across segments. */
+const TOKEN_PLACEHOLDER = "￼";
+
+/**
+ * Renders a template as editor HTML. Backtick code spans are matched across
+ * the whole template, not per string segment, so a backtick pair may wrap an
+ * interpolation (`` `${name}` ``) — and the text *between* two such wrapped
+ * interpolations is not mistaken for a span of its own.
+ *
+ * @internal Exported for testing.
+ */
+export function toHTML(value: TemplateValue): string {
+  let flat = "";
+  for (const seg of value)
+    flat += typeof seg === "string" ? seg : TOKEN_PLACEHOLDER;
+
+  const codeRanges = Array.from(flat.matchAll(/`[^`\n]+`/g), m => [
+    m.index,
+    m.index + m[0].length,
+  ]);
+
   let html = "";
+  let offset = 0;
   for (const seg of value) {
-    if (typeof seg === "string") {
-      html += renderPlainText(seg);
-    } else {
+    if (typeof seg !== "string") {
       const display = "${" + seg.expr + "}";
       html += `<span class="te-token">${escapeHTML(display)}</span>`;
+      offset += 1;
+      continue;
     }
+    // Split the segment at code-span boundaries falling inside it.
+    const end = offset + seg.length;
+    let pos = offset;
+    for (const [from, to] of codeRanges) {
+      if (to <= pos || from >= end) continue;
+      if (from > pos) html += renderText(flat.slice(pos, from), false);
+      const codeEnd = Math.min(to, end);
+      html += renderText(flat.slice(Math.max(from, pos), codeEnd), true);
+      pos = codeEnd;
+    }
+    html += renderText(flat.slice(pos, end), false);
+    offset = end;
   }
   return html;
 }
