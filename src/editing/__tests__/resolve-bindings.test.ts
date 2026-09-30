@@ -35,6 +35,28 @@ describe("resolveBindings", () => {
     });
   });
 
+  test("destructures a member call's root, keeping the member in the callee", () => {
+    const member: PropValue = {
+      kind: "functionCall",
+      callee: "typeSafeAi.evaluationModel",
+      args: [{ kind: "primitive", value: "jev-latest" }],
+      binding: [
+        { kind: "parameter", enclosingCall: helper },
+        {
+          kind: "import",
+          spec: { name: "typeSafeAi", from: "@ai-sdk/typesafe-ai" },
+        },
+      ],
+    };
+    const { sourceCode, value } = resolveBindings(destructured, member);
+    expect(sourceCode).toContain("({ openai, typeSafeAi })");
+    expect(value).toEqual({
+      kind: "functionCall",
+      callee: "typeSafeAi.evaluationModel",
+      args: [{ kind: "primitive", value: "jev-latest" }],
+    });
+  });
+
   test("leaves the destructure alone when the callee is already in it", () => {
     const { sourceCode, value } = resolveBindings(
       destructured,

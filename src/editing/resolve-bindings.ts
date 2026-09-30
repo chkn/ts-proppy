@@ -24,7 +24,8 @@ type DestructureTarget =
  *   (e.g. `prompts(({ openai }) => …)`) with a destructured first parameter, or
  *   no parameter at all yet. The callee is added to that destructure (creating
  *   it if needed) and the call's binding is dropped: it reads its callee from
- *   the closure rather than from an import.
+ *   the closure rather than from an import. For a member call
+ *   (`typeSafeAi.evaluationModel(…)`), the destructured name is its root.
  * - An `import` candidate always fits, and becomes the call's single binding,
  *   so writing the value adds the import.
  *
@@ -74,7 +75,10 @@ export function resolveBindings(
         const target = destructureFor(candidate);
         if (!target) continue;
         const names = targetAdditions.get(target) ?? new Set<string>();
-        names.add(call.callee);
+        // A member call (`typeSafeAi.evaluationModel(…)`) binds its root.
+        // Split on whitespace and `?` too: the callee is source text, so it
+        // may be a formatted or optional chain (`typeSafeAi\n  ?.model`).
+        names.add(call.callee.split(/[\s?.]/)[0]);
         targetAdditions.set(target, names);
         const { binding: _drop, ...rest } = call;
         return rest;

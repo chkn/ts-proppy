@@ -206,6 +206,60 @@ describe("extractPropertiesFromObjectLiteral", () => {
     }
   });
 
+  test("binds a member call through the import of its root", () => {
+    const source = `import { typeSafeAi } from '@ai-sdk/typesafe-ai'\nconst x = { model: typeSafeAi.evaluationModel("jev-latest") }`;
+    const defs: PropDefinition[] = [
+      {
+        name: "model",
+        type: { kind: "primitive", syntax: "any" },
+        optional: false,
+      },
+    ];
+    const model = extractValues(source, defs).values!.model;
+    expect(model).toMatchObject({
+      kind: "functionCall",
+      callee: "typeSafeAi.evaluationModel",
+      args: [{ kind: "primitive", value: "jev-latest" }],
+      binding: {
+        kind: "import",
+        spec: { name: "typeSafeAi", from: "@ai-sdk/typesafe-ai" },
+      },
+    });
+  });
+
+  test("binds a member call through a destructured parameter holding its root", () => {
+    const source = `
+      import { prompts } from '@evalution/vercel-ai-sdk'
+      export default prompts(({ typeSafeAi }) => ({ model: typeSafeAi.evaluationModel('jev-latest') }))
+    `;
+    const defs: PropDefinition[] = [
+      {
+        name: "model",
+        type: { kind: "primitive", syntax: "any" },
+        optional: false,
+      },
+    ];
+    const model = extractValues(source, defs).values!.model;
+    expect(model).toMatchObject({
+      kind: "functionCall",
+      binding: { kind: "parameter", enclosingCall: { callee: "prompts" } },
+    });
+  });
+
+  test("leaves a call on a computed callee unbound", () => {
+    const source = `import { make } from 'm'\nconst x = { model: make().model('x') }`;
+    const defs: PropDefinition[] = [
+      {
+        name: "model",
+        type: { kind: "primitive", syntax: "any" },
+        optional: false,
+      },
+    ];
+    const model = extractValues(source, defs).values!.model;
+    expect(model.kind).toBe("functionCall");
+    if (model.kind === "functionCall") expect(model.binding).toBeUndefined();
+  });
+
   test("callee binding is undefined when the identifier resolves to neither parameter nor import", () => {
     const source = `const localFn = (s: string) => s; const x = { model: localFn('hi') }`;
     const defs: PropDefinition[] = [

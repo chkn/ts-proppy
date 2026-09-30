@@ -62,6 +62,11 @@ export {
   valuesEqual,
 } from "./types/catalog.js";
 export { defaultValueForType } from "./types/default-value.js";
+export type {
+  DiscriminatedUnionCase,
+  DiscriminatedUnionInfo,
+} from "./types/discriminated-union.js";
+export { getDiscriminatedUnionInfo } from "./types/discriminated-union.js";
 export type { OpenStringUnionInfo } from "./types/open-string-union.js";
 export {
   filterSuggestions,

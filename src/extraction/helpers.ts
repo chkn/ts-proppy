@@ -318,7 +318,7 @@ export function parseValueFromExpression(
       parseValueFromExpression(arg as ts.Expression, sourceFile),
     );
 
-    const binding = resolveCalleeBinding(node, callee, sourceFile);
+    const binding = resolveCalleeBinding(node, sourceFile);
 
     return {
       kind: "functionCall",
@@ -543,6 +543,9 @@ function bindingNameContains(b: ts.BindingName, name: string): boolean {
 /**
  * Resolve where `callee` is bound at the given call site.
  *
+ * A member call (`provider.model()`, `a.b.c()`) is bound through its root
+ * identifier: that is the name a parameter or import supplies.
+ *
  * Preference order:
  * 1. Parameter of an enclosing function (innermost wins). If that function is
  *    passed as an argument to another call expression, that call's identity is
@@ -551,20 +554,17 @@ function bindingNameContains(b: ts.BindingName, name: string): boolean {
  */
 function resolveCalleeBinding(
   callNode: ts.CallExpression,
-  callee: string,
   sourceFile: ts.SourceFile,
 ): CalleeBinding | undefined {
-  // Only resolve bare identifiers; `a.b()` style is left unbound.
-  if (!ts.isIdentifier(callNode.expression)) {
-    return undefined;
-  }
+  const root = calleeRoot(callNode.expression);
+  if (!root) return undefined;
 
-  // Walk up looking for an enclosing function whose params bind `callee`.
+  // Walk up looking for an enclosing function whose params bind the root.
   let cur: ts.Node | undefined = callNode.parent;
   while (cur) {
     if (isFunctionLike(cur)) {
       const fn = cur;
-      if (fn.parameters.some(p => parameterBindsName(p, callee))) {
+      if (fn.parameters.some(p => parameterBindsName(p, root))) {
         const enclosingCall = describeEnclosingCall(fn, sourceFile);
         return enclosingCall
           ? { kind: "parameter", enclosingCall }
@@ -575,8 +575,19 @@ function resolveCalleeBinding(
   }
 
   // Fall back to top-level import.
-  const spec = findImportForIdentifier(sourceFile, callee);
+  const spec = findImportForIdentifier(sourceFile, root);
   return spec ? { kind: "import", spec } : undefined;
+}
+
+/**
+ * The identifier a callee is reached through: `openai` for `openai(…)`,
+ * `typeSafeAi` for `typeSafeAi.evaluationModel(…)`. `undefined` for any other
+ * callee (a computed access, a call's result, `this.x`).
+ */
+function calleeRoot(expression: ts.Expression): string | undefined {
+  let node = expression;
+  while (ts.isPropertyAccessExpression(node)) node = node.expression;
+  return ts.isIdentifier(node) ? node.text : undefined;
 }
 
 /**
