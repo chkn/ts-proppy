@@ -286,4 +286,31 @@ export function render(root: Node) {}`,
     );
     expect(defs[0].type.kind).toBe("object");
   });
+
+  test("resolves a cross-file alias of Awaited<ReturnType<typeof fn>> to the array it returns", () => {
+    const defs = extractParams(
+      {
+        "/proj/tasks.ts": `export type TaskId = string & { readonly __brand: 'TaskId' }
+export type TaskListing = Awaited<ReturnType<typeof listTasks>>
+export async function listTasks(): Promise<({ id: TaskId; title: string } & Partial<{ status: string }>)[]> {
+  return []
+}`,
+        "/proj/prompt.ts": `import type { TaskListing } from './tasks'
+export function run(tasks: TaskListing) {}`,
+      },
+      "/proj/prompt.ts",
+    );
+    const type = defs[0].type;
+    expect(type.kind).toBe("array");
+    if (type.kind !== "array") return;
+    expect(type.syntax).toBe("TaskListing");
+    const element = type.element.type;
+    expect(element.kind).toBe("object");
+    if (element.kind !== "object") return;
+    expect(element.properties.map(p => p.name)).toEqual([
+      "id",
+      "title",
+      "status",
+    ]);
+  });
 });

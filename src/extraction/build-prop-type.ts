@@ -197,7 +197,14 @@ export function buildPropType(
     // If not found in same file and typeChecker available, resolve cross-file
     if (!typeDecl && typeChecker) {
       const type = typeChecker.getTypeAtLocation(typeNode);
-      const symbol = type.getSymbol();
+      // An alias that resolves to an array (`Awaited<ReturnType<typeof f>>`)
+      // has the lib's `Array` as its symbol; expanding that declaration would
+      // show the array's own members (`length`) instead of its elements. The
+      // resolved-type path below knows the element type.
+      const symbol =
+        typeChecker.isArrayType(type) || typeChecker.isTupleType(type)
+          ? undefined
+          : type.getSymbol();
       if (symbol?.declarations && symbol.declarations.length > 0) {
         const d = symbol.declarations[0];
         if (ts.isInterfaceDeclaration(d) || ts.isTypeAliasDeclaration(d)) {
