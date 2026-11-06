@@ -509,3 +509,34 @@ export default function Button({ label, onClick, disabled }: ButtonProps) {
     expect(result.definitions[1].optional).toBe(true);
   });
 });
+
+describe("literal types", () => {
+  test.each([
+    ["a double-quoted string", `"open"`, "open"],
+    ["a single-quoted string", `'open'`, "open"],
+    ["an escaped apostrophe", `'it\\'s'`, "it's"],
+    ["an escaped double quote", `"say \\"hi\\""`, `say "hi"`],
+    ["a backtick string", "`open`", "open"],
+    ["a number", "42", 42],
+    ["a negative number", "-1", -1],
+    ["a hex number", "0x10", 16],
+    ["a separated number", "1_000", 1000],
+    ["true", "true", true],
+    ["false", "false", false],
+    ["null", "null", null],
+    ["a bigint, as its source text", "1n", "1n"],
+  ])("reads %s", (_, syntax, value) => {
+    const result = extractFromSource(`
+export interface Props {
+  field: ${syntax}
+}
+export default ({ field }: Props) => <div>{field}</div>
+`);
+
+    expect(result.definitions[0].type).toMatchObject({
+      kind: "constant",
+      syntax,
+      value,
+    });
+  });
+});

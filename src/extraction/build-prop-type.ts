@@ -10,7 +10,7 @@ import {
   extractDefinitionsFromDeclaration,
   extractDefinitionsFromTypeNode,
 } from "./extract-properties.js";
-import { findTypeDeclaration } from "./helpers.js";
+import { findTypeDeclaration, parseValueFromExpression } from "./helpers.js";
 
 function isFunctionType(typeNode: ts.TypeNode | undefined): boolean {
   if (!typeNode) return false;
@@ -30,17 +30,19 @@ function isFunctionType(typeNode: ts.TypeNode | undefined): boolean {
  */
 const expanding = new Set<ts.Node>();
 
+/**
+ * A literal type's value, read the same way as a literal expression so the two
+ * compare equal. Anything with no primitive form (a bigint) stays as its source
+ * text.
+ */
 function extractLiteralValue(
   typeNode: ts.LiteralTypeNode,
   sourceFile: ts.SourceFile,
 ): unknown {
-  const rawValue = typeNode.literal.getText(sourceFile);
-  const jsonValue = rawValue.replace(/^["']|["']$/g, '"');
-  try {
-    return JSON.parse(jsonValue);
-  } catch {
-    return rawValue;
-  }
+  const value = parseValueFromExpression(typeNode.literal, sourceFile);
+  return value.kind === "primitive"
+    ? value.value
+    : typeNode.literal.getText(sourceFile);
 }
 
 export function buildPropType(

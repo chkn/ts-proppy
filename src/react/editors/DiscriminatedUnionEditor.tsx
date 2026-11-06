@@ -19,30 +19,29 @@ interface DiscriminatedUnionEditorProps {
 }
 
 /**
- * The discriminator value already written into `value`'s object properties —
- * never a fallback to `cases[0]`. Pre-selecting a case here would let
- * `updateField` capture that case's fields into `value` while the
+ * Which of `cases` the discriminator already written into `value`'s object
+ * properties names — never a fallback to `cases[0]`. Pre-selecting a case here
+ * would let `updateField` capture that case's fields into `value` while the
  * discriminator itself was never chosen, silently producing an object with
  * no way to tell which case it was meant to be. Nothing case-specific is
  * offered until a real choice exists to attach it to.
  */
-export function currentDiscriminatorValue(
+export function currentCaseIndex(
+  cases: readonly DiscriminatedUnionCase[],
   discriminator: string,
   objProps: Record<string, PropValue>,
-): string | undefined {
+): number | undefined {
   const prop = objProps[discriminator];
-  return prop?.kind === "primitive" ? String(prop.value) : undefined;
+  if (prop?.kind !== "primitive") return undefined;
+  const index = cases.findIndex(c => c.discriminatorValue === prop.value);
+  return index === -1 ? undefined : index;
 }
 
-/** The case named by an explicit {@link currentDiscriminatorValue}, if any. */
-export function currentCaseFor(
-  cases: readonly DiscriminatedUnionCase[],
-  discriminatorValue: string | undefined,
-): DiscriminatedUnionCase | undefined {
-  if (discriminatorValue === undefined) return undefined;
-  return cases.find(c => String(c.discriminatorValue) === discriminatorValue);
-}
-
+/**
+ * Options carry their case's index rather than its discriminator, so a chosen
+ * one reaches `onChange` with its real type (`1`, `true`) rather than
+ * stringified.
+ */
 export function DiscriminatedUnionEditor({
   discriminatedUnionInfo,
   value,
@@ -56,13 +55,16 @@ export function DiscriminatedUnionEditor({
 
   const objProps: Record<string, PropValue> =
     value?.kind === "object" ? value.properties : {};
-  const discriminatorValue = currentDiscriminatorValue(discriminator, objProps);
-  const currentCase = currentCaseFor(cases, discriminatorValue);
+  const selected = currentCaseIndex(cases, discriminator, objProps);
+  const currentCase = selected === undefined ? undefined : cases[selected];
 
-  const handleDiscriminatorChange = (newValue: string) => {
+  const handleCaseChange = (index: number) => {
+    const { discriminatorValue } = cases[index];
     onChange({
       kind: "object",
-      properties: { [discriminator]: { kind: "primitive", value: newValue } },
+      properties: {
+        [discriminator]: { kind: "primitive", value: discriminatorValue },
+      },
     });
   };
 
@@ -88,19 +90,14 @@ export function DiscriminatedUnionEditor({
         </label>
         <select
           id={discriminatorId}
-          value={discriminatorValue ?? ""}
-          onChange={e => handleDiscriminatorChange(e.target.value)}
+          value={selected === undefined ? "" : String(selected)}
+          onChange={e => handleCaseChange(Number(e.target.value))}
           style={controlStyle}
           disabled={disabled}
         >
-          {discriminatorValue === undefined && (
-            <option value="">-- Select --</option>
-          )}
-          {cases.map(c => (
-            <option
-              key={String(c.discriminatorValue)}
-              value={String(c.discriminatorValue)}
-            >
+          {selected === undefined && <option value="">-- Select --</option>}
+          {cases.map((c, index) => (
+            <option key={index} value={String(index)}>
               {String(c.discriminatorValue)}
             </option>
           ))}
