@@ -183,6 +183,20 @@ function, and a JSON fallback. Bring your own editors via the `plugins` prop:
 />
 ```
 
+A plugin's `match` also receives the slot's `path` (`['tags', '0']` for the
+first element of a `tags` array), so a host can keep state per slot. Because
+an element's path is its index, removing one shifts the paths of every element
+after it. To keep per-slot state attached to the right element, listen with
+`ArrayEditsContext`:
+
+```tsx
+<ArrayEditsContext.Provider
+  value={{ onRemoveElement: (path, index) => shiftStateAfter(path, index) }}
+>
+  <PropsEditor props={props} onChange={onChange} />
+</ArrayEditsContext.Provider>
+```
+
 ## React UI theming
 
 The editors render with inline styles so they work without a stylesheet

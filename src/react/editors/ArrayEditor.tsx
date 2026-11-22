@@ -1,6 +1,8 @@
+import { useContext } from "react";
 import { defaultValueForType } from "../../types/default-value.js";
 import type { PropDefinition } from "../../types/prop-definition.js";
 import type { PropValue } from "../../types/prop-value.js";
+import { ArrayEditsContext } from "../array-edits-context.js";
 import { isComplexPropType } from "../complex-type.js";
 import { ItemEditor } from "../ItemEditor.js";
 import {
@@ -31,6 +33,7 @@ export function ArrayEditor({
   disabled,
 }: ArrayEditorProps) {
   const elements: PropValue[] = value?.kind === "array" ? value.elements : [];
+  const { onRemoveElement } = useContext(ArrayEditsContext);
 
   const addItem = () => {
     onChange({
@@ -43,6 +46,7 @@ export function ArrayEditor({
   };
 
   const removeItem = (index: number) => {
+    onRemoveElement?.(path, index);
     onChange({
       kind: "array",
       elements: elements.filter((_, i) => i !== index),

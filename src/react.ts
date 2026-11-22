@@ -16,6 +16,8 @@ export {
   valueToSourceText,
 } from "./editing/value-to-string.js";
 export { materializeValue } from "./materialize/materialize-value.js";
+export type { ArrayEdits } from "./react/array-edits-context.js";
+export { ArrayEditsContext } from "./react/array-edits-context.js";
 export type { CatalogIconRenderer } from "./react/catalog-icon-context.js";
 export {
   CatalogIconContext,
